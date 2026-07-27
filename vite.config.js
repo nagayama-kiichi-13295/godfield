@@ -10,6 +10,7 @@ export default defineConfig({
                 'resources/css/title.css',
                 'resources/css/player.css',
                 'resources/css/matching.css',
+                'resources/css/match.css',
                 'resources/js/app.js'
             ],
             refresh: true,
