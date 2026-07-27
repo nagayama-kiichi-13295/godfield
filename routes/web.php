@@ -1,6 +1,9 @@
 <?php
+
 use App\Models\GameMatch;
+use App\Events\MatchStarted;
 use App\Events\PlayerProgressed;
+use App\Support\WordList;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
@@ -12,9 +15,22 @@ Route::get('/matching', function () {
         'name' => session('player_name')
     ]);
 });
+
 Route::get('/match/{matchId}', function (string $matchId) {
-    return view('match', ['matchId' => $matchId]);
+    return view('match', [
+        'matchId' => $matchId,
+        'words' => WordList::forMatch($matchId),
+    ]);
 });
+
+Route::post('/match/{matchId}/start', function (string $matchId) {
+    $startAt = (int) (microtime(true) * 1000) + 4000;
+
+    broadcast(new MatchStarted($matchId, $startAt));
+
+    return response()->json(['start_at' => $startAt]);
+});
+
 Route::get('/player', function () {
     return view('player');
 });
@@ -28,6 +44,7 @@ Route::post('/player', function (\Illuminate\Http\Request $request) {
 
     return redirect('/matching');
 });
+
 Route::post('/match/{matchId}/progress', function (Request $request, string $matchId) {
     $data = $request->validate([
         'player_key' => ['required', 'string', 'max:64'],

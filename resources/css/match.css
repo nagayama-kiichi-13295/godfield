@@ -1,0 +1,88 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #1b1b2f;
+    color: #fff;
+    font-family: sans-serif;
+}
+
+.arena {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.bars { display: flex; gap: 24px; }
+.bar-block { flex: 1; }
+.bar-label { font-size: 14px; margin-bottom: 6px; opacity: .8; }
+
+.bar {
+    height: 22px;
+    background: #12121f;
+    border-radius: 11px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    width: 100%;
+    transition: width .2s ease;
+}
+
+.bar-fill.me { background: #4CAF50; }
+.bar-fill.you { background: #e0555a; }
+
+.stage {
+    margin-top: 70px;
+    text-align: center;
+}
+
+.display {
+    font-size: 46px;
+    letter-spacing: .1em;
+    margin-bottom: 24px;
+}
+
+.roma {
+    font-size: 30px;
+    font-family: monospace;
+    letter-spacing: .12em;
+    color: #8b8ba7;
+    transition: color .1s;
+}
+
+.roma.miss { color: #e0555a; }
+.roma .done { color: #4CAF50; }
+
+.footer {
+    margin-top: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.start-btn {
+    padding: 12px 32px;
+    font-size: 18px;
+    color: #fff;
+    background: #4CAF50;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.start-btn:hover { background: #45a049; }
+.status { font-size: 13px; opacity: .6; }
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(27, 27, 47, .92);
+}
+
+.overlay-text { font-size: 56px; }
