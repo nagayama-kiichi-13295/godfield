@@ -5,13 +5,27 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('title');
 });
-
+Route::get('/matching', function () {
+    return "マッチング画面";
+});
 Route::get('/match/{matchId}', function (string $matchId) {
     return view('match', ['matchId' => $matchId]);
 });
+Route::get('/player', function () {
+    return view('player');
+});
 
+Route::post('/player', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'name' => ['required', 'string', 'max:20'],
+    ]);
+
+    session(['player_name' => $request->name]);
+
+    return redirect('/matching');
+});
 Route::post('/match/{matchId}/progress', function (Request $request, string $matchId) {
     $data = $request->validate([
         'player_key' => ['required', 'string', 'max:64'],
