@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('title');
 });
-
+Route::get('/matching', function () {
+    return "マッチング画面";
+});
 Route::get('/match/{matchId}', function (string $matchId) {
     return view('match', ['matchId' => $matchId]);
 });
