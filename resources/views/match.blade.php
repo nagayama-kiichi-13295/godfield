@@ -31,7 +31,11 @@
     <div class="overlay" id="overlay">
         <div class="overlay-inner">
             <div class="overlay-text" id="overlay-text">スタートを押してください</div>
-            <button class="start-btn" id="start">スタート</button>
+            <div class="overlay-sub" id="overlay-sub"></div>
+            <div class="overlay-actions">
+                <button class="start-btn" id="start">スタート</button>
+                <a class="home-btn" id="home" href="/">タイトルへ戻る</a>
+            </div>
         </div>
     </div>
 </div>
@@ -52,6 +56,7 @@
         const matchId = @json($matchId);
         const words = @json($words);
         const playerKey = makePlayerKey();
+        const token = document.querySelector('meta[name=csrf-token]').content;
 
         const MAX_HP = 100;
         const DAMAGE = 10;
@@ -61,7 +66,9 @@
         const status = document.getElementById('status');
         const overlay = document.getElementById('overlay');
         const overlayText = document.getElementById('overlay-text');
+        const overlaySub = document.getElementById('overlay-sub');
         const startBtn = document.getElementById('start');
+        const homeBtn = document.getElementById('home');
         const hpMeEl = document.getElementById('hp-me');
         const hpYouEl = document.getElementById('hp-you');
 
@@ -71,6 +78,8 @@
         let oppDone = 0;
         let playing = false;
         let finished = false;
+
+        homeBtn.style.display = 'none';
 
         function render() {
             const w = words[idx];
@@ -93,17 +102,38 @@
             return { hpMe, hpYou };
         }
 
+        async function reportFinish() {
+            try {
+                const res = await fetch(`/match/${matchId}/finish`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token },
+                });
+                const data = await res.json();
+                if (data.winner) {
+                    overlaySub.textContent = data.winner + ' の勝利';
+                }
+            } catch (e) {
+                overlaySub.textContent = '結果の記録に失敗しました';
+            }
+        }
+
+        function showResult(iWon) {
+            finished = true;
+            playing = false;
+            overlay.style.display = 'flex';
+            overlayText.textContent = iWon ? '勝ち' : '負け';
+            startBtn.style.display = 'none';
+            homeBtn.style.display = 'inline-block';
+        }
+
         function checkFinish() {
             if (finished) return;
             const { hpMe, hpYou } = updateHp();
-            if (hpYou <= 0 || hpMe <= 0) {
-                finished = true;
-                playing = false;
-                overlay.style.display = 'flex';
-                overlayText.textContent = hpYou <= 0 ? '勝ち' : '負け';
-                startBtn.textContent = '再戦';
-                startBtn.style.display = 'inline-block';
-            }
+            if (hpYou > 0 && hpMe > 0) return;
+
+            const iWon = hpYou <= 0;
+            showResult(iWon);
+            if (iWon) reportFinish();
         }
 
         function sendProgress() {
@@ -111,7 +141,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    'X-CSRF-TOKEN': token,
                     'X-Socket-Id': window.Echo ? (window.Echo.socketId() ?? '') : '',
                 },
                 body: JSON.stringify({ player_key: playerKey, word_index: myDone }),
@@ -123,7 +153,9 @@
             idx = 0; pos = 0; myDone = 0; oppDone = 0;
             updateHp();
             overlay.style.display = 'flex';
+            overlaySub.textContent = '';
             startBtn.style.display = 'none';
+            homeBtn.style.display = 'none';
 
             const tick = () => {
                 const left = startAt - Date.now();
@@ -163,13 +195,12 @@
         });
 
         startBtn.addEventListener('click', async () => {
+            startBtn.blur();
             startBtn.disabled = true;
             try {
                 await fetch(`/match/${matchId}/start`, {
                     method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                    },
+                    headers: { 'X-CSRF-TOKEN': token },
                 });
             } finally {
                 startBtn.disabled = false;
@@ -192,6 +223,10 @@
             .listen('.player.progressed', (e) => {
                 oppDone = e.wordIndex;
                 checkFinish();
+            })
+            .listen('.match.finished', (e) => {
+                if (!finished) showResult(false);
+                overlaySub.textContent = e.winner + ' の勝利';
             });
     });
 </script>

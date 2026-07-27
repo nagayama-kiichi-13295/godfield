@@ -11,6 +11,7 @@ class GameMatch extends Model
     protected $fillable = [
         'player1',
         'player2',
+        'winner',
         'status',
     ];
 }

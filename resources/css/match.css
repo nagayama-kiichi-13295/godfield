@@ -14,9 +14,20 @@ body {
     min-height: 520px;
 }
 
-.bars { display: flex; gap: 24px; }
-.bar-block { flex: 1; }
-.bar-label { font-size: 14px; margin-bottom: 6px; opacity: .8; }
+.bars {
+    display: flex;
+    gap: 24px;
+}
+
+.bar-block {
+    flex: 1;
+}
+
+.bar-label {
+    font-size: 14px;
+    margin-bottom: 6px;
+    opacity: .8;
+}
 
 .bar {
     height: 22px;
@@ -31,8 +42,13 @@ body {
     transition: width .2s ease;
 }
 
-.bar-fill.me { background: #4CAF50; }
-.bar-fill.you { background: #e0555a; }
+.bar-fill.me {
+    background: #4CAF50;
+}
+
+.bar-fill.you {
+    background: #e0555a;
+}
 
 .stage {
     margin-top: 70px;
@@ -54,15 +70,23 @@ body {
     min-height: 40px;
 }
 
-.roma.miss { color: #e0555a; }
-.roma .done { color: #4CAF50; }
+.roma.miss {
+    color: #e0555a;
+}
+
+.roma .done {
+    color: #4CAF50;
+}
 
 .footer {
     margin-top: 70px;
     text-align: center;
 }
 
-.status { font-size: 13px; opacity: .6; }
+.status {
+    font-size: 13px;
+    opacity: .6;
+}
 
 .overlay {
     position: absolute;
@@ -80,7 +104,9 @@ body {
     gap: 32px;
 }
 
-.overlay-text { font-size: 56px; }
+.overlay-text {
+    font-size: 56px;
+}
 
 .start-btn {
     padding: 14px 40px;
@@ -92,5 +118,36 @@ body {
     cursor: pointer;
 }
 
-.start-btn:hover { background: #45a049; }
-.start-btn:disabled { opacity: .5; cursor: default; }
+.start-btn:hover {
+    background: #45a049;
+}
+
+.start-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.overlay-sub {
+    font-size: 20px;
+    opacity: .75;
+    min-height: 26px;
+}
+
+.overlay-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.home-btn {
+    padding: 14px 32px;
+    font-size: 18px;
+    color: #fff;
+    background: #3a3a5c;
+    border-radius: 10px;
+    text-decoration: none;
+}
+
+.home-btn:hover {
+    background: #46466e;
+}
