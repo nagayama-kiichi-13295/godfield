@@ -10,11 +10,11 @@
 <div class="arena">
     <div class="bars">
         <div class="bar-block">
-            <div class="bar-label">あなた</div>
+            <div class="bar-label">{{ $me }}</div>
             <div class="bar"><div class="bar-fill me" id="hp-me"></div></div>
         </div>
         <div class="bar-block">
-            <div class="bar-label">相手</div>
+            <div class="bar-label">{{ $opponent }}</div>
             <div class="bar"><div class="bar-fill you" id="hp-you"></div></div>
         </div>
     </div>
