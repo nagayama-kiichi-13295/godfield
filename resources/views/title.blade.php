@@ -48,9 +48,9 @@
 <link rel="stylesheet" href="{{ asset('css/title.css') }}">
     <h1>⌨ タイピングコロシアム ⌨</h1>
 
-    <a href="/matching" class="btn">
-        ゲーム開始
-    </a>
+<a href="/player" class="start-btn">
+    ゲーム開始
+</a>
 
 </div>
 
