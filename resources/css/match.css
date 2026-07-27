@@ -11,6 +11,7 @@ body {
     max-width: 900px;
     margin: 0 auto;
     padding: 40px 20px;
+    min-height: 520px;
 }
 
 .bars { display: flex; gap: 24px; }
@@ -50,6 +51,7 @@ body {
     letter-spacing: .12em;
     color: #8b8ba7;
     transition: color .1s;
+    min-height: 40px;
 }
 
 .roma.miss { color: #e0555a; }
@@ -57,23 +59,9 @@ body {
 
 .footer {
     margin-top: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
+    text-align: center;
 }
 
-.start-btn {
-    padding: 12px 32px;
-    font-size: 18px;
-    color: #fff;
-    background: #4CAF50;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-.start-btn:hover { background: #45a049; }
 .status { font-size: 13px; opacity: .6; }
 
 .overlay {
@@ -85,4 +73,24 @@ body {
     background: rgba(27, 27, 47, .92);
 }
 
+.overlay-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+}
+
 .overlay-text { font-size: 56px; }
+
+.start-btn {
+    padding: 14px 40px;
+    font-size: 20px;
+    color: #fff;
+    background: #4CAF50;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.start-btn:hover { background: #45a049; }
+.start-btn:disabled { opacity: .5; cursor: default; }

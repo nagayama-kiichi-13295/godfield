@@ -25,12 +25,14 @@
     </div>
 
     <div class="footer">
-        <button class="start-btn" id="start">スタート</button>
         <span class="status" id="status">接続中...</span>
     </div>
 
     <div class="overlay" id="overlay">
-        <div class="overlay-text" id="overlay-text">スタートを押してください</div>
+        <div class="overlay-inner">
+            <div class="overlay-text" id="overlay-text">スタートを押してください</div>
+            <button class="start-btn" id="start">スタート</button>
+        </div>
     </div>
 </div>
 
@@ -59,6 +61,7 @@
         const status = document.getElementById('status');
         const overlay = document.getElementById('overlay');
         const overlayText = document.getElementById('overlay-text');
+        const startBtn = document.getElementById('start');
         const hpMeEl = document.getElementById('hp-me');
         const hpYouEl = document.getElementById('hp-you');
 
@@ -98,6 +101,8 @@
                 playing = false;
                 overlay.style.display = 'flex';
                 overlayText.textContent = hpYou <= 0 ? '勝ち' : '負け';
+                startBtn.textContent = '再戦';
+                startBtn.style.display = 'inline-block';
             }
         }
 
@@ -118,6 +123,7 @@
             idx = 0; pos = 0; myDone = 0; oppDone = 0;
             updateHp();
             overlay.style.display = 'flex';
+            startBtn.style.display = 'none';
 
             const tick = () => {
                 const left = startAt - Date.now();
@@ -156,13 +162,18 @@
             }
         });
 
-        document.getElementById('start').addEventListener('click', async () => {
-            await fetch(`/match/${matchId}/start`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                },
-            });
+        startBtn.addEventListener('click', async () => {
+            startBtn.disabled = true;
+            try {
+                await fetch(`/match/${matchId}/start`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    },
+                });
+            } finally {
+                startBtn.disabled = false;
+            }
         });
 
         updateHp();
