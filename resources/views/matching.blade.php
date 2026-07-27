@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>マッチング中</title>
 
-    @vite(['resources/css/matching.css'])
+@vite(['resources/css/matching.css', 'resources/js/app.js'])
 </head>
 
 <body>
@@ -31,6 +31,17 @@
     </button>
 
 </div>
+<script>
+    const matchId = "{{ $matchId }}";
 
+    window.Echo.channel(`match.${matchId}`)
+        .listen('.match.started', (e) => {
+
+            console.log('対戦開始', e);
+
+            location.href = `/match/${e.matchId}`;
+
+        });
+</script>
 </body>
 </html>
