@@ -1,0 +1,79 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1d3557, #457b9d);
+    font-family: "Yu Gothic", sans-serif;
+}
+
+.container {
+    width: 500px;
+    padding: 50px;
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+}
+
+.match-title {
+    color: white;
+    font-size: 48px;
+    margin-bottom: 20px;
+    text-shadow: 3px 3px 10px rgba(0,0,0,.5);
+}
+
+.match-text {
+    color: #f1f1f1;
+    font-size: 22px;
+    margin-bottom: 40px;
+}
+
+.loader {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 40px;
+    border: 8px solid rgba(255,255,255,.2);
+    border-top: 8px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.cancel-btn {
+    width: 220px;
+    height: 55px;
+    border: none;
+    border-radius: 12px;
+    background: #e74c3c;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.cancel-btn:hover {
+    background: #c0392b;
+    transform: scale(1.05);
+}
+
+.cancel-btn:active {
+    transform: scale(0.95);
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

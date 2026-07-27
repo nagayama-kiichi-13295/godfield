@@ -1,5 +1,5 @@
 <?php
-
+use App\Models\GameMatch;
 use App\Events\PlayerProgressed;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
@@ -8,7 +8,9 @@ Route::get('/', function () {
     return view('title');
 });
 Route::get('/matching', function () {
-    return "マッチング画面";
+    return view('matching', [
+        'name' => session('player_name')
+    ]);
 });
 Route::get('/match/{matchId}', function (string $matchId) {
     return view('match', ['matchId' => $matchId]);
