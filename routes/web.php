@@ -3,6 +3,7 @@
 use App\Events\MatchFound;
 use App\Events\MatchStarted;
 use App\Events\PlayerProgressed;
+use App\Events\MatchFinished;
 use App\Models\GameMatch;
 use App\Support\WordList;
 use Illuminate\Http\Request;
@@ -129,4 +130,25 @@ Route::post('/match/{matchId}/progress', function (Request $request, string $mat
         ->toOthers();
 
     return response()->noContent();
+});
+
+Route::post('/match/{matchId}/finish', function (string $matchId) {
+    $match = GameMatch::find($matchId);
+
+    if (! $match) {
+        return response()->json(['winner' => null], 404);
+    }
+
+    if ($match->status === 'finished') {
+        return response()->json(['winner' => $match->winner]);
+    }
+
+    $winner = session('match_role') === 'player2' ? $match->player2 : $match->player1;
+
+    $match->update(['status' => 'finished', 'winner' => $winner]);
+    session()->forget(['match_id', 'match_role']);
+
+    broadcast(new MatchFinished($matchId, $winner ?? '不明'));
+
+    return response()->json(['winner' => $winner]);
 });
