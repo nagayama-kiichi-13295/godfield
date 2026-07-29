@@ -200,3 +200,43 @@ body {
 .bar-fill.hit { filter: brightness(2.2); }
 
 .heal { font-size: 15px; color: #7fd18a; }
+
+.telegraph {
+    display: none;
+    margin: 18px 0 -10px;
+    padding: 12px 16px;
+    background: rgba(224, 85, 90, .12);
+    border: 1px solid #e0555a;
+    border-radius: 10px;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.telegraph.on { display: block; }
+
+.telegraph-text {
+    font-size: 15px;
+    color: #ff9a9e;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.telegraph-bar {
+    height: 8px;
+    background: #12121f;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.telegraph-fill {
+    height: 100%;
+    width: 100%;
+    background: #e0555a;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .65; }
+}
+
+.bar-block.boss .bar-label { font-size: 16px; font-weight: bold; color: var(--c); }
+.bar-block.boss .bar { height: 28px; border-radius: 14px; }

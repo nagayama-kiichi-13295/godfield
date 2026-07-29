@@ -34,5 +34,11 @@
             <rect x="6" y="20" width="4" height="2.5" rx="1"/>
             <rect x="14" y="20" width="4" height="2.5" rx="1"/>
             @break
+            
+        @case('boss')
+            <path d="M4 3 L7 8 L4 7 Z"/>
+            <path d="M20 3 L17 8 L20 7 Z"/>
+            <path d="M12 4 C17 4 20.5 7.6 20.5 12.5 C20.5 17.5 16.8 21 12 21 C7.2 21 3.5 17.5 3.5 12.5 C3.5 7.6 7 4 12 4 Z"/>
+            @break
     @endswitch
 </svg>

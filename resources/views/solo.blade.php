@@ -23,14 +23,19 @@
             </div>
             <div class="bar"><div class="bar-fill me" id="hp-me"></div></div>
         </div>
-        <div class="bar-block" style="--c: {{ $stageConf['color'] }}">
+        <div class="bar-block" id="enemy-block" style="--c: {{ $stageConf['color'] }}">
             <div class="bar-head">
-                @include('partials.icon', ['icon' => 'cpu', 'color' => $stageConf['color'], 'size' => 26])
+                <span id="enemy-icon">@include('partials.icon', ['icon' => 'cpu', 'color' => $stageConf['color'], 'size' => 26])</span>
                 <span class="bar-label" id="enemy-name">-</span>
                 <span class="hp-num" id="hp-you-num"></span>
             </div>
             <div class="bar"><div class="bar-fill you" id="hp-you"></div></div>
         </div>
+    </div>
+
+    <div class="telegraph" id="telegraph">
+        <div class="telegraph-text" id="telegraph-text"></div>
+        <div class="telegraph-bar"><div class="telegraph-fill" id="telegraph-fill"></div></div>
     </div>
 
     <div class="stage">
@@ -63,7 +68,9 @@
 <script>
 window.addEventListener('DOMContentLoaded', () => {
     const words = @json($words);
+    const defenseWords = @json($defenseWords);
     const enemies = @json($stageConf['enemies']);
+    const boss = @json($boss);
     const healBetween = @json($stageConf['heal_between']);
     const runId = @json($runId);
     const MY_MAX = @json($me['max_hp']);
@@ -71,33 +78,29 @@ window.addEventListener('DOMContentLoaded', () => {
     const MY_HEAL = @json($me['heal']);
     const token = document.querySelector('meta[name=csrf-token]').content;
 
-    const roma = document.getElementById('roma');
-    const comboEl = document.getElementById('combo');
-    const dmgEl = document.getElementById('dmg');
-    const healEl = document.getElementById('heal');
-    const progressEl = document.getElementById('progress');
-    const timerEl = document.getElementById('timer');
-    const enemyNameEl = document.getElementById('enemy-name');
-    const overlay = document.getElementById('overlay');
-    const overlayText = document.getElementById('overlay-text');
-    const overlaySub = document.getElementById('overlay-sub');
-    const startBtn = document.getElementById('start');
-    const hpMeEl = document.getElementById('hp-me');
-    const hpYouEl = document.getElementById('hp-you');
-    const hpMeNum = document.getElementById('hp-me-num');
-    const hpYouNum = document.getElementById('hp-you-num');
+    const $ = (id) => document.getElementById(id);
+    const roma = $('roma'), comboEl = $('combo'), dmgEl = $('dmg'), healEl = $('heal');
+    const progressEl = $('progress'), timerEl = $('timer'), enemyNameEl = $('enemy-name');
+    const enemyBlock = $('enemy-block');
+    const overlay = $('overlay'), overlayText = $('overlay-text'), overlaySub = $('overlay-sub');
+    const startBtn = $('start');
+    const hpMeEl = $('hp-me'), hpYouEl = $('hp-you');
+    const hpMeNum = $('hp-me-num'), hpYouNum = $('hp-you-num');
+    const telegraph = $('telegraph'), telegraphText = $('telegraph-text'), telegraphFill = $('telegraph-fill');
 
     const HEAL_CAP_RATE = 0.25;
+    const total = enemies.length + (boss ? 1 : 0);
 
     let ei = 0, myHp = MY_MAX, enemyHp = 0, enemyMax = 1;
     let healedThisEnemy = 0, healCap = 0;
-    let deadline = 0, attackTimer = null, rafId = null;
-    let running = false, over = false;
+    let deadline = 0, attackTimer = null, chargeTimer = null, rafId = null, chargeRaf = null;
+    let running = false, over = false, isBoss = false;
+    let charging = false, defNeed = 0, defDone = 0, chargeEnd = 0, chargeSpan = 1;
 
     const typing = window.Typing.create({
         words,
-        displayEl: document.getElementById('display'),
-        readingEl: document.getElementById('reading'),
+        displayEl: $('display'),
+        readingEl: $('reading'),
         romaEl: roma,
         onMiss: () => {
             roma.classList.add('miss');
@@ -106,6 +109,13 @@ window.addEventListener('DOMContentLoaded', () => {
         },
         onWord: (info) => {
             if (!running) return;
+
+            if (charging) {
+                defDone += 1;
+                telegraphText.textContent = `防御 ${defDone} / ${defNeed}`;
+                if (defDone >= defNeed) resolveCharge(true);
+                return;
+            }
 
             const dmg = window.Typing.calcDamage(MY_POWER, info.chars, info.seconds, info.combo);
             enemyHp -= dmg;
@@ -139,21 +149,86 @@ window.addEventListener('DOMContentLoaded', () => {
         hpYouNum.textContent = `${eh} / ${enemyMax}`;
     }
 
-    function clearTimers() {
-        clearTimeout(attackTimer);
-        cancelAnimationFrame(rafId);
+    function hitMe(power) {
+        myHp -= power;
+        updateHp();
+        hpMeEl.classList.add('hit');
+        setTimeout(() => hpMeEl.classList.remove('hit'), 150);
+        return myHp <= 0;
     }
 
-    function scheduleAttack(interval) {
+    function clearTimers() {
+        clearTimeout(attackTimer);
+        clearTimeout(chargeTimer);
+        cancelAnimationFrame(rafId);
+        cancelAnimationFrame(chargeRaf);
+    }
+
+    function phase() {
+        if (!isBoss) return null;
+        const ratio = enemyHp / enemyMax;
+        for (const p of boss.phases) {
+            if (ratio > p.until) return p;
+        }
+        return boss.phases[boss.phases.length - 1];
+    }
+
+    function scheduleAttack() {
+        const interval = isBoss ? phase().interval : enemies[ei].interval;
+        const power = isBoss ? phase().power : enemies[ei].power;
+
         attackTimer = setTimeout(() => {
             if (!running) return;
-            myHp -= enemies[ei].power;
-            updateHp();
-            hpMeEl.classList.add('hit');
-            setTimeout(() => hpMeEl.classList.remove('hit'), 150);
-            if (myHp <= 0) { finish(); return; }
-            scheduleAttack(interval);
+            if (!charging && hitMe(power)) { finish(); return; }
+            scheduleAttack();
         }, interval * 1000);
+    }
+
+    function scheduleCharge() {
+        if (!isBoss) return;
+        chargeTimer = setTimeout(() => {
+            if (!running || over) return;
+            beginCharge();
+        }, phase().charge_every * 1000);
+    }
+
+    function beginCharge() {
+        const p = phase();
+        charging = true;
+        defNeed = p.charge_words;
+        defDone = 0;
+        chargeSpan = p.charge_time * 1000;
+        chargeEnd = Date.now() + chargeSpan;
+
+        telegraph.classList.add('on');
+        telegraphText.textContent = `${boss.name} が力を溜めている！ 防御 0 / ${defNeed}`;
+        typing.setWords(defenseWords);
+
+        const tick = () => {
+            if (!running || !charging) return;
+            const left = chargeEnd - Date.now();
+            if (left <= 0) { resolveCharge(false); return; }
+            telegraphFill.style.width = (left / chargeSpan * 100) + '%';
+            chargeRaf = requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
+    function resolveCharge(defended) {
+        charging = false;
+        cancelAnimationFrame(chargeRaf);
+        telegraph.classList.remove('on');
+        typing.setWords(words);
+
+        if (defended) {
+            healEl.textContent = '防御成功！';
+            setTimeout(() => { healEl.textContent = ''; }, 1000);
+        } else if (hitMe(phase().charge_power)) {
+            finish();
+            return;
+        }
+
+        scheduleCharge();
     }
 
     function watchTimer() {
@@ -169,7 +244,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function startEnemy(i) {
         ei = i;
-        const e = enemies[i];
+        isBoss = boss && i === enemies.length;
+        const e = isBoss ? boss : enemies[i];
 
         enemyMax = e.hp;
         enemyHp = e.hp;
@@ -178,17 +254,23 @@ window.addEventListener('DOMContentLoaded', () => {
         deadline = Date.now() + e.limit * 1000;
 
         enemyNameEl.textContent = e.name;
-        progressEl.textContent = `${i + 1} / ${enemies.length}`;
+        progressEl.textContent = isBoss ? 'BOSS' : `${i + 1} / ${total}`;
+        enemyBlock.classList.toggle('boss', !!isBoss);
+        if (isBoss) enemyBlock.style.setProperty('--c', boss.color);
 
         updateHp();
         running = true;
+        typing.setWords(words);
         typing.start();
-        scheduleAttack(e.interval);
+        scheduleAttack();
+        scheduleCharge();
         watchTimer();
     }
 
     async function defeat() {
         running = false;
+        charging = false;
+        telegraph.classList.remove('on');
         typing.stop();
         clearTimers();
 
@@ -204,10 +286,10 @@ window.addEventListener('DOMContentLoaded', () => {
             // 記録に失敗しても進行は止めない
         }
 
-        const last = ei + 1 >= enemies.length;
+        const last = ei + 1 >= total;
 
         overlay.style.display = 'flex';
-        overlayText.textContent = last ? 'クリア！' : `${enemies[ei].name} 撃破`;
+        overlayText.textContent = last ? 'クリア！' : `${isBoss ? boss.name : enemies[ei].name} 撃破`;
         startBtn.style.display = 'none';
 
         if (last) { finish(); return; }
@@ -215,19 +297,23 @@ window.addEventListener('DOMContentLoaded', () => {
         const recover = Math.round(MY_MAX * healBetween);
         myHp = Math.min(MY_MAX, myHp + recover);
         updateHp();
-        overlaySub.textContent = `HP +${recover} 回復`;
+
+        const nextIsBoss = boss && ei + 1 === enemies.length;
+        overlaySub.textContent = nextIsBoss ? `HP +${recover}　次はボスだ` : `HP +${recover} 回復`;
 
         setTimeout(() => {
             overlay.style.display = 'none';
             overlaySub.textContent = '';
             startEnemy(ei + 1);
-        }, 1600);
+        }, nextIsBoss ? 2400 : 1600);
     }
 
     async function finish() {
         if (over) return;
         over = true;
         running = false;
+        charging = false;
+        telegraph.classList.remove('on');
         typing.stop();
         clearTimers();
 
@@ -268,7 +354,7 @@ window.addEventListener('DOMContentLoaded', () => {
         );
     });
 
-    progressEl.textContent = `1 / ${enemies.length}`;
+    progressEl.textContent = `1 / ${total}`;
     enemyNameEl.textContent = enemies[0].name;
     enemyMax = enemies[0].hp;
     enemyHp = enemies[0].hp;

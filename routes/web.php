@@ -343,6 +343,8 @@ Route::get('/solo/{stage?}', function (Request $request, string $stage = 'traini
             'stageConf' => $conf,
             'runId' => $run->id,
             'words' => WordList::forMatch('solo-' . Str::random(8)),
+            'boss' => empty($conf['boss']) ? null : config('bosses.' . $conf['boss']),
+            'defenseWords' => WordList::forMatch('def-' . Str::random(8), 20),
         ]),
         $player
     );
@@ -361,13 +363,18 @@ Route::post('/solo/defeat', function (Request $request) {
         return response()->json(['ok' => false], 422);
     }
 
-    $enemies = $run->stageConfig()['enemies'];
+    $conf = $run->stageConfig();
+    $enemies = $conf['enemies'];
+    $idx = $data['index'];
 
-    if (! isset($enemies[$data['index']])) {
+    if ($idx < count($enemies)) {
+        $gain = (int) $enemies[$idx]['exp'];
+    } elseif ($idx === count($enemies) && ! empty($conf['boss'])) {
+        $gain = (int) config('bosses.' . $conf['boss'] . '.exp', 0);
+    } else {
         return response()->json(['ok' => false], 422);
     }
 
-    $gain = $enemies[$data['index']]['exp'];
     $stats = $player->statsFor($run->character);
     $leveled = $stats->addExp($gain);
 
@@ -395,12 +402,15 @@ Route::post('/solo/finish', function (Request $request) {
 
     $conf = $run->stageConfig();
     $stats = $player->statsFor($run->character);
-    $cleared = $run->cleared >= count($conf['enemies']);
+
+    $total = count($conf['enemies']) + (empty($conf['boss']) ? 0 : 1);
+    $cleared = $run->cleared >= $total;
+
     $bonus = 0;
     $leveled = 0;
 
     if ($cleared) {
-        $bonus = $conf['clear_bonus'];
+        $bonus = (int) $conf['clear_bonus'];
         $leveled = $stats->addExp($bonus);
         $stats->increment('wins');
         $run->increment('exp_gained', $bonus);
@@ -409,6 +419,7 @@ Route::post('/solo/finish', function (Request $request) {
     }
 
     $run->update(['finished' => true]);
+    $run->refresh();
 
     return response()->json([
         'cleared' => $cleared,

@@ -17,6 +17,7 @@ return [
         'color' => '#c98b3a',
         'clear_bonus' => 150,
         'heal_between' => 0.12,
+        'boss' => 'ogre',
         'enemies' => [
             ['name' => 'ゴブリン', 'hp' => 70, 'power' => 7, 'interval' => 3.6, 'limit' => 40, 'exp' => 25],
             ['name' => 'オーク', 'hp' => 95, 'power' => 9, 'interval' => 3.3, 'limit' => 45, 'exp' => 40],
@@ -30,6 +31,7 @@ return [
         'color' => '#c0392b',
         'clear_bonus' => 320,
         'heal_between' => 0.10,
+        'boss' => 'dragon',
         'enemies' => [
             ['name' => 'デスナイト', 'hp' => 150, 'power' => 14, 'interval' => 2.7, 'limit' => 45, 'exp' => 90],
             ['name' => 'キマイラ', 'hp' => 185, 'power' => 16, 'interval' => 2.5, 'limit' => 50, 'exp' => 120],

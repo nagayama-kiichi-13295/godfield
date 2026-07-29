@@ -3,17 +3,18 @@ import { createMatcher, canonicalRomaji } from './romaji';
 export { canonicalRomaji };
 
 export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMiss }) {
+    let list = words;
     let idx = 0;
     let completed = 0;
     let combo = 0;
     let active = false;
-    let matcher = createMatcher(words[0].k);
+    let matcher = createMatcher(list[0].k);
     let missedThisWord = false;
     let wordStart = 0;
     let chars = 0;
 
     function render() {
-        const w = words[idx];
+        const w = list[idx];
         if (!w) return;
 
         displayEl.textContent = w.d;
@@ -34,8 +35,8 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
     }
 
     function loadWord(i) {
-        idx = i % words.length;
-        matcher = createMatcher(words[idx].k);
+        idx = i % list.length;
+        matcher = createMatcher(list[idx].k);
         missedThisWord = false;
         chars = 0;
         wordStart = performance.now();
@@ -81,6 +82,7 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
         start() { active = true; wordStart = performance.now(); render(); },
         stop() { active = false; },
         reset() { completed = 0; combo = 0; loadWord(0); render(); },
+        setWords(next) { list = next; loadWord(0); render(); },
         render,
         destroy() { active = false; document.removeEventListener('keydown', onKey); },
     };
