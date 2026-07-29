@@ -158,3 +158,23 @@ body {
     letter-spacing: .15em;
     margin-bottom: 18px;
 }
+
+.meter {
+    margin-top: 26px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    min-height: 28px;
+}
+
+.combo {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffd166;
+}
+
+.dmg {
+    font-size: 15px;
+    color: #e0a0a0;
+}

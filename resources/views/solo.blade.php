@@ -29,6 +29,10 @@
             <div class="display" id="display">準備中</div>
             <div class="reading" id="reading"></div>
             <div class="roma" id="roma"></div>
+            <div class="meter">
+                <span class="combo" id="combo"></span>
+                <span class="dmg" id="dmg"></span>
+            </div>
         </div>
 
         <div class="footer">
@@ -72,6 +76,9 @@
                 cpuTimer = null,
                 cpuIdx = 0;
 
+            const comboEl = document.getElementById('combo');
+            const dmgEl = document.getElementById('dmg');
+
             const typing = window.Typing.create({
                 words,
                 displayEl: document.getElementById('display'),
@@ -80,9 +87,17 @@
                 onMiss: () => {
                     roma.classList.add('miss');
                     setTimeout(() => roma.classList.remove('miss'), 120);
+                    comboEl.textContent = '';
                 },
-                onWord: () => {
-                    cpuHp -= MY_POWER;
+                onWord: (info) => {
+                    const dmg = window.Typing.calcDamage(
+                        MY_POWER, info.chars, info.seconds, info.combo
+                    );
+
+                    cpuHp -= dmg;
+                    comboEl.textContent = info.combo >= 2 ? `${info.combo} COMBO` : '';
+                    dmgEl.textContent = `${dmg} ダメージ`;
+
                     updateHp();
                     if (cpuHp <= 0) finish(true);
                 },
@@ -148,6 +163,8 @@
                 myHp = MY_MAX;
                 cpuHp = CPU_MAX;
                 cpuIdx = 0;
+                comboEl.textContent = '';
+                dmgEl.textContent = '';
                 typing.reset();
                 updateHp();
 

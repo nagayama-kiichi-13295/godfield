@@ -29,6 +29,10 @@
             <div class="display" id="display">準備中</div>
             <div class="reading" id="reading"></div>
             <div class="roma" id="roma"></div>
+            <div class="meter">
+                <span class="combo" id="combo"></span>
+                <span class="dmg" id="dmg"></span>
+            </div>
         </div>
 
         <div class="footer">
@@ -65,12 +69,13 @@
             const MY_MAX = @json($me['max_hp']);
             const MY_POWER = @json($me['power']);
             const OPP_MAX = @json($opp['max_hp']);
-            const OPP_POWER = @json($opp['power']);
 
             const playerKey = makePlayerKey();
             const token = document.querySelector('meta[name=csrf-token]').content;
 
             const roma = document.getElementById('roma');
+            const comboEl = document.getElementById('combo');
+            const dmgEl = document.getElementById('dmg');
             const status = document.getElementById('status');
             const overlay = document.getElementById('overlay');
             const overlayText = document.getElementById('overlay-text');
@@ -80,9 +85,10 @@
             const hpMeEl = document.getElementById('hp-me');
             const hpYouEl = document.getElementById('hp-you');
 
-            let myDone = 0,
-                oppDone = 0,
-                finished = false;
+            let myDamage = 0,
+                oppDamage = 0,
+                myWords = 0;
+            let finished = false;
 
             homeBtn.style.display = 'none';
 
@@ -94,17 +100,27 @@
                 onMiss: () => {
                     roma.classList.add('miss');
                     setTimeout(() => roma.classList.remove('miss'), 120);
+                    comboEl.textContent = '';
                 },
-                onWord: (count) => {
-                    myDone = count;
-                    sendProgress();
+                onWord: (info) => {
+                    const dmg = window.Typing.calcDamage(
+                        MY_POWER, info.chars, info.seconds, info.combo
+                    );
+
+                    myDamage += dmg;
+                    myWords = info.count;
+
+                    comboEl.textContent = info.combo >= 2 ? `${info.combo} COMBO` : '';
+                    dmgEl.textContent = `${dmg} ダメージ`;
+
+                    sendProgress(info.combo);
                     checkFinish();
                 },
             });
 
             function updateHp() {
-                const hpMe = Math.max(0, MY_MAX - oppDone * OPP_POWER);
-                const hpOpp = Math.max(0, OPP_MAX - myDone * MY_POWER);
+                const hpMe = Math.max(0, MY_MAX - oppDamage);
+                const hpOpp = Math.max(0, OPP_MAX - myDamage);
                 hpMeEl.style.width = (hpMe / MY_MAX * 100) + '%';
                 hpYouEl.style.width = (hpOpp / OPP_MAX * 100) + '%';
                 return {
@@ -167,7 +183,7 @@
                 iWon ? reportFinish() : loadResult();
             }
 
-            function sendProgress() {
+            function sendProgress(combo) {
                 fetch(`/match/${matchId}/progress`, {
                     method: 'POST',
                     headers: {
@@ -177,18 +193,23 @@
                     },
                     body: JSON.stringify({
                         player_key: playerKey,
-                        word_index: myDone
+                        word_index: myWords,
+                        damage: myDamage,
+                        combo: combo,
                     }),
                 });
             }
 
             function beginAt(startAt) {
                 finished = false;
-                myDone = 0;
-                oppDone = 0;
+                myDamage = 0;
+                oppDamage = 0;
+                myWords = 0;
                 typing.reset();
                 updateHp();
 
+                comboEl.textContent = '';
+                dmgEl.textContent = '';
                 overlay.style.display = 'flex';
                 overlaySub.textContent = '';
                 startBtn.style.display = 'none';
@@ -239,7 +260,7 @@
             window.Echo.channel(`match.${matchId}`)
                 .listen('.match.started', (e) => beginAt(e.startAt))
                 .listen('.player.progressed', (e) => {
-                    oppDone = e.wordIndex;
+                    oppDamage = e.damage;
                     checkFinish();
                 })
                 .listen('.match.finished', () => {

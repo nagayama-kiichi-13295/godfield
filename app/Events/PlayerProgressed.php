@@ -16,6 +16,8 @@ class PlayerProgressed implements ShouldBroadcastNow
         public string $matchId,
         public string $playerKey,
         public int $wordIndex,
+        public int $damage,
+        public int $combo,
     ) {}
 
     public function broadcastOn(): Channel
