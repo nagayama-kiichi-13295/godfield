@@ -17,6 +17,7 @@ export default defineConfig({
                 'resources/css/player.css',
                 'resources/css/matching.css',
                 'resources/css/match.css',
+                'resources/css/character.css',
                 'resources/js/app.js'
             ],
             refresh: true,

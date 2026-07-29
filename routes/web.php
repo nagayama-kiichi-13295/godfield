@@ -6,20 +6,25 @@ use App\Events\PlayerProgressed;
 use App\Events\MatchFinished;
 use App\Models\GameMatch;
 use App\Support\WordList;
+use App\Support\CurrentPlayer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => view('title'));
+Route::get('/', fn() => view('title'));
 
-Route::get('/player', fn () => view('player'));
+Route::get('/player', fn() => view('player'));
 
 Route::post('/player', function (Request $request) {
     $request->validate(['name' => ['required', 'string', 'max:20']]);
 
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $player->update(['name' => $request->name]);
+
     session(['player_name' => $request->name]);
 
-    return redirect('/matching');
+    return CurrentPlayer::attach(redirect('/character'), $player);
 });
 
 Route::get('/matching', function () {
@@ -151,4 +156,73 @@ Route::post('/match/{matchId}/finish', function (string $matchId) {
     broadcast(new MatchFinished($matchId, $winner ?? '不明'));
 
     return response()->json(['winner' => $winner]);
+});
+
+Route::get('/character', function (Request $request) {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    return CurrentPlayer::attach(
+        response()->view('character', [
+            'player' => $player,
+            'characters' => config('characters'),
+            'cpus' => config('cpu'),
+        ]),
+        $player
+    );
+});
+
+Route::post('/character', function (Request $request) {
+    $data = $request->validate(['character' => ['required', 'string']]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (array_key_exists($data['character'], config('characters'))) {
+        $player->update(['character' => $data['character']]);
+    }
+
+    return CurrentPlayer::attach(redirect('/character'), $player);
+});
+
+Route::get('/solo/{difficulty?}', function (Request $request, string $difficulty = 'normal') {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $cpu = config('cpu.' . $difficulty) ?? config('cpu.normal');
+
+    return CurrentPlayer::attach(
+        response()->view('solo', [
+            'player' => $player,
+            'characterName' => $player->config()['name'],
+            'maxHp' => $player->maxHp(),
+            'power' => $player->power(),
+            'cpu' => $cpu,
+            'difficulty' => $difficulty,
+            'words' => WordList::forMatch('solo-' . Str::random(8)),
+        ]),
+        $player
+    );
+});
+
+Route::post('/solo/result', function (Request $request) {
+    $data = $request->validate([
+        'won' => ['required', 'boolean'],
+        'difficulty' => ['required', 'string'],
+    ]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $cpu = config('cpu.' . $data['difficulty']) ?? config('cpu.normal');
+
+    $gain = $data['won'] ? $cpu['exp_win'] : $cpu['exp_lose'];
+    $leveled = $player->addExp($gain);
+
+    $player->increment($data['won'] ? 'wins' : 'losses');
+
+    return CurrentPlayer::attach(
+        response()->json([
+            'gain' => $gain,
+            'level' => $player->level,
+            'exp' => $player->exp,
+            'required' => $player->requiredExp(),
+            'leveled' => $leveled,
+        ]),
+        $player
+    );
 });
