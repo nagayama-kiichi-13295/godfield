@@ -7,6 +7,9 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
     let idx = 0;
     let completed = 0;
     let combo = 0;
+    let maxCombo = 0;
+    let missCount = 0;
+    let typedChars = 0;
     let active = false;
     let matcher = createMatcher(list[0].k);
     let missedThisWord = false;
@@ -51,12 +54,14 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
 
         if (!matcher.input(key)) {
             combo = 0;
+            missCount += 1;
             missedThisWord = true;
-            if (onMiss) onMiss({ combo });
+            if (onMiss) onMiss({ combo, key });
             return;
         }
 
         chars += 1;
+        typedChars += 1;
 
         if (!matcher.done) {
             render();
@@ -67,6 +72,7 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
 
         completed += 1;
         if (!missedThisWord) combo += 1;
+        if (combo > maxCombo) maxCombo = combo;
 
         const info = { count: completed, combo, chars, seconds };
 
@@ -81,8 +87,13 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
     return {
         start() { active = true; wordStart = performance.now(); render(); },
         stop() { active = false; },
-        reset() { completed = 0; combo = 0; loadWord(0); render(); },
+        reset() {
+            completed = 0; combo = 0; maxCombo = 0;
+            missCount = 0; typedChars = 0;
+            loadWord(0); render();
+        },
         setWords(next) { list = next; loadWord(0); render(); },
+        stats() { return { maxCombo, missCount, typedChars }; },
         render,
         destroy() { active = false; document.removeEventListener('keydown', onKey); },
     };

@@ -417,28 +417,36 @@ Route::post('/solo/defeat', function (Request $request) {
 });
 
 Route::post('/solo/finish', function (Request $request) {
-    $data = $request->validate(['run_id' => ['required', 'integer']]);
+    $data = $request->validate([
+        'run_id' => ['required', 'integer'],
+        'max_combo' => ['nullable', 'integer', 'min:0', 'max:99999'],
+        'typed_chars' => ['nullable', 'integer', 'min:0', 'max:999999'],
+        'miss_count' => ['nullable', 'integer', 'min:0', 'max:999999'],
+        'duration_ms' => ['nullable', 'integer', 'min:0', 'max:99999999'],
+    ]);
 
     $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
     $run = SoloRun::where('id', $data['run_id'])->where('player_id', $player->id)->first();
 
-    if (! $run || $run->finished) {
-        return response()->json(['ok' => false], 422);
+    if (! $run) {
+        return response()->json(['ok' => false], 404);
+    }
+
+    if ($run->finished) {
+        return response()->json(['ok' => true, 'redirect' => "/solo/result/{$run->id}"]);
     }
 
     $conf = $run->stageConfig();
     $stats = $player->statsFor($run->character);
 
-    $total = count($conf['enemies']) + (empty($conf['boss']) ? 0 : 1);
-    $cleared = $run->cleared >= $total;
-
+    $levelBefore = $stats->level;
+    $cleared = $run->cleared >= $run->totalEnemies();
     $bonus = 0;
     $drop = null;
-    $leveled = 0;
 
     if ($cleared) {
         $bonus = (int) $conf['clear_bonus'];
-        $leveled = $stats->addExp($bonus);
+        $stats->addExp($bonus);
         $stats->increment('wins');
         $run->increment('exp_gained', $bonus);
         $drop = $player->grantFrom($conf['drops'] ?? []);
@@ -446,20 +454,43 @@ Route::post('/solo/finish', function (Request $request) {
         $stats->increment('losses');
     }
 
-    $run->update(['finished' => true]);
-    $run->refresh();
-
-    return response()->json([
-        'cleared' => $cleared,
-        'bonus' => $bonus,
-        'drop' => $drop ? config('equipment.items.' . $drop . '.name') : null,
-        'total' => $run->exp_gained,
-        'character' => $stats->name(),
-        'level' => $stats->level,
-        'exp' => $stats->exp,
-        'required' => $stats->requiredExp(),
-        'leveled' => $leveled,
+    $run->update([
+        'finished' => true,
+        'is_cleared' => $cleared,
+        'level_before' => $levelBefore,
+        'level_after' => $stats->level,
+        'bonus_exp' => $bonus,
+        'drop_item' => $drop,
+        'max_combo' => $data['max_combo'] ?? 0,
+        'typed_chars' => $data['typed_chars'] ?? 0,
+        'miss_count' => $data['miss_count'] ?? 0,
+        'duration_ms' => $data['duration_ms'] ?? 0,
     ]);
+
+    return response()->json(['ok' => true, 'redirect' => "/solo/result/{$run->id}"]);
+});
+
+Route::get('/solo/result/{run}', function (Request $request, int $run) {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $r = SoloRun::where('id', $run)->where('player_id', $player->id)->first();
+
+    if (! $r || ! $r->finished) {
+        return redirect('/character');
+    }
+
+    $pc = $player->statsFor($r->character);
+
+    return CurrentPlayer::attach(
+        response()->view('result', [
+            'run' => $r,
+            'stageConf' => $r->stageConfig(),
+            'charConf' => config('characters.' . $r->character),
+            'pc' => $pc,
+            'dropName' => $r->drop_item ? config('equipment.items.' . $r->drop_item . '.name') : null,
+            'dropColor' => $r->drop_item ? config('equipment.items.' . $r->drop_item . '.color') : null,
+        ]),
+        $player
+    );
 });
 
 Route::get('/record', function (Request $request) {

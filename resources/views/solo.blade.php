@@ -131,6 +131,7 @@
             let running = false,
                 over = false,
                 isBoss = false;
+            let runStart = 0;
             let charging = false,
                 defNeed = 0,
                 defDone = 0,
@@ -333,6 +334,7 @@
                 if (isBoss) enemyBlock.style.setProperty('--c', boss.color);
 
                 updateHp();
+                if (i === 0) funStart = Date.now();
                 running = true;
                 typing.setWords(words);
                 typing.start();
@@ -410,14 +412,12 @@
                 const failed = myHp <= 0 || Date.now() >= deadline;
                 if (failed) window.FX.SFX.lose();
 
+                const s = typing.stats();
+
                 overlay.style.display = 'flex';
                 startBtn.style.display = 'none';
+                overlayText.textContent = failed ? `${ei + 1} 体目で力尽きた` : 'クリア！';
                 overlaySub.textContent = '結果を集計中...';
-
-                if (d.drop) {
-                    overlaySub.textContent += `　【${d.drop} を入手！】`;
-                    window.FX.SFX.levelup();
-                }
 
                 try {
                     const res = await fetch('/solo/finish', {
@@ -427,16 +427,23 @@
                             'X-CSRF-TOKEN': token
                         },
                         body: JSON.stringify({
-                            run_id: runId
+                            run_id: runId,
+                            max_combo: s.maxCombo,
+                            typed_chars: s.typedChars,
+                            miss_count: s.missCount,
+                            duration_ms: runStart ? Date.now() - runStart : 0,
                         }),
                     });
                     const d = await res.json();
 
-                    overlayText.textContent = d.cleared ? 'クリア！' : `${ei + 1} 体目で力尽きた`;
-                    overlaySub.textContent =
-                        `${d.character}　合計 EXP +${d.total}` +
-                        (d.bonus ? `（クリアボーナス +${d.bonus}）` : '') +
-                        `　Lv.${d.level}　${d.exp}/${d.required}`;
+                    if (d.redirect) {
+                        setTimeout(() => {
+                            location.href = d.redirect;
+                        }, 900);
+                        return;
+                    }
+
+                    overlaySub.textContent = '結果の記録に失敗しました';
                 } catch (e) {
                     overlaySub.textContent = '結果の記録に失敗しました';
                 }

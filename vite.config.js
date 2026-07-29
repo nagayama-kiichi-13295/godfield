@@ -13,6 +13,7 @@ export default defineConfig({
                 'resources/css/match.css',
                 'resources/css/character.css',
                 'resources/css/record.css',
+                'resources/css/result.css',
                 'resources/js/app.js',
             ],
             refresh: true,
