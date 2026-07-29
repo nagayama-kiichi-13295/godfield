@@ -414,6 +414,11 @@
                 startBtn.style.display = 'none';
                 overlaySub.textContent = '結果を集計中...';
 
+                if (d.drop) {
+                    overlaySub.textContent += `　【${d.drop} を入手！】`;
+                    window.FX.SFX.levelup();
+                }
+
                 try {
                     const res = await fetch('/solo/finish', {
                         method: 'POST',

@@ -47,6 +47,8 @@ Route::get('/character', function (Request $request) {
             'stats' => $stats,
             'stages' => config('stages'),
             'growth' => config('growth'),
+            'equipment' => config('equipment'),
+            'owned' => $player->ownedItems(),
         ]),
         $player
     );
@@ -61,6 +63,30 @@ Route::post('/character', function (Request $request) {
         $player->update(['character' => $data['character']]);
         $player->statsFor($data['character']);
     }
+
+    return CurrentPlayer::attach(redirect('/character'), $player);
+});
+
+Route::post('/character/equip', function (Request $request) {
+    $data = $request->validate([
+        'character' => ['required', 'string'],
+        'slot' => ['required', 'string'],
+        'item' => ['nullable', 'string'],
+    ]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (! array_key_exists($data['character'], config('characters'))) {
+        return CurrentPlayer::attach(redirect('/character'), $player);
+    }
+
+    $item = $data['item'] ?: null;
+
+    if ($item !== null && ! in_array($item, $player->ownedItems(), true)) {
+        return CurrentPlayer::attach(redirect('/character'), $player);
+    }
+
+    $player->statsFor($data['character'])->equip($data['slot'], $item);
 
     return CurrentPlayer::attach(redirect('/character'), $player);
 });
@@ -407,6 +433,7 @@ Route::post('/solo/finish', function (Request $request) {
     $cleared = $run->cleared >= $total;
 
     $bonus = 0;
+    $drop = null;
     $leveled = 0;
 
     if ($cleared) {
@@ -414,6 +441,7 @@ Route::post('/solo/finish', function (Request $request) {
         $leveled = $stats->addExp($bonus);
         $stats->increment('wins');
         $run->increment('exp_gained', $bonus);
+        $drop = $player->grantFrom($conf['drops'] ?? []);
     } else {
         $stats->increment('losses');
     }
@@ -424,6 +452,7 @@ Route::post('/solo/finish', function (Request $request) {
     return response()->json([
         'cleared' => $cleared,
         'bonus' => $bonus,
+        'drop' => $drop ? config('equipment.items.' . $drop . '.name') : null,
         'total' => $run->exp_gained,
         'character' => $stats->name(),
         'level' => $stats->level,

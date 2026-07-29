@@ -69,6 +69,27 @@
                     </div>
                 </div>
 
+                <div class="equip">
+                    @foreach ($equipment['slots'] as $slot => $slotLabel)
+                        <form method="POST" action="/character/equip" class="equip-row">
+                            @csrf
+                            <input type="hidden" name="character" value="{{ $charKey }}">
+                            <input type="hidden" name="slot" value="{{ $slot }}">
+                            <span class="equip-label">{{ $slotLabel }}</span>
+                            <select name="item" class="equip-select" onchange="this.form.submit()">
+                                <option value="">なし</option>
+                                @foreach ($equipment['items'] as $itemKey => $it)
+                                    @if ($it['slot'] === $slot && in_array($itemKey, $owned, true))
+                                        <option value="{{ $itemKey }}" @selected($s->{'eq_' . $slot} === $itemKey)>
+                                            {{ $it['name'] }}
+                                        </option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </form>
+                    @endforeach
+                </div>
+
                 <div class="crecord">{{ $s->wins }}勝 {{ $s->losses }}敗</div>
 
                 <form method="POST" action="/character">

@@ -5,6 +5,7 @@ return [
         'label' => '訓練場',
         'color' => '#7a8fa6',
         'clear_bonus' => 60,
+        'drops' => ['iron_sword', 'leather_mail', 'wood_charm'],
         'heal_between' => 0.15,
         'enemies' => [
             ['name' => 'スライム', 'hp' => 45, 'power' => 4, 'interval' => 4.5, 'limit' => 40, 'exp' => 15],
@@ -16,6 +17,7 @@ return [
         'label' => '修練の道',
         'color' => '#c98b3a',
         'clear_bonus' => 150,
+        'drops' => ['flame_blade', 'guard_plate', 'sage_rod'],
         'heal_between' => 0.12,
         'boss' => 'ogre',
         'enemies' => [
@@ -30,6 +32,7 @@ return [
         'label' => '深淵',
         'color' => '#c0392b',
         'clear_bonus' => 320,
+        'drops' => ['dragon_fang', 'dragon_scale', 'sage_charm', 'ancient_seal'],
         'heal_between' => 0.10,
         'boss' => 'dragon',
         'enemies' => [

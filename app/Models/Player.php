@@ -30,4 +30,30 @@ class Player extends Model
 
         return $this->statsFor($key);
     }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(PlayerItem::class);
+    }
+
+    public function ownedItems(): array
+    {
+        return $this->items()->pluck('item')->all();
+    }
+
+    public function grantFrom(array $pool): ?string
+    {
+        $owned = $this->ownedItems();
+        $candidates = array_values(array_diff($pool, $owned));
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        $key = $candidates[array_rand($candidates)];
+
+        $this->items()->create(['item' => $key]);
+
+        return $key;
+    }
 }

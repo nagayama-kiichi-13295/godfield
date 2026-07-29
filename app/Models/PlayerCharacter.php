@@ -9,9 +9,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PlayerCharacter extends Model
 {
     protected $fillable = [
-        'player_id', 'character', 'level', 'exp',
-        'points', 'pt_hp', 'pt_power', 'pt_int',
-        'wins', 'losses',
+        'player_id',
+        'character',
+        'level',
+        'exp',
+        'points',
+        'pt_hp',
+        'pt_power',
+        'pt_int',
+        'eq_weapon',
+        'eq_armor',
+        'eq_charm',
+        'wins',
+        'losses',
     ];
 
     public function player(): BelongsTo
@@ -28,9 +38,38 @@ class PlayerCharacter extends Model
         ];
     }
 
+    public function equipMap(): array
+    {
+        return [
+            'weapon' => $this->eq_weapon,
+            'armor' => $this->eq_armor,
+            'charm' => $this->eq_charm,
+        ];
+    }
+
+    public function equip(string $slot, ?string $itemKey): bool
+    {
+        if (! array_key_exists($slot, config('equipment.slots'))) {
+            return false;
+        }
+
+        if ($itemKey !== null) {
+            $it = config('equipment.items.' . $itemKey);
+
+            if (! $it || $it['slot'] !== $slot) {
+                return false;
+            }
+        }
+
+        $this->{'eq_' . $slot} = $itemKey;
+        $this->save();
+
+        return true;
+    }
+
     public function stats(): array
     {
-        return Stats::of($this->character, $this->level, $this->pointMap());
+        return Stats::of($this->character, $this->level, $this->pointMap(), $this->equipMap());
     }
 
     public function name(): string
