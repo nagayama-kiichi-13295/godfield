@@ -15,3 +15,9 @@ export function calcDamage(power, chars, seconds, combo, opt = {}) {
 
     return Math.max(1, Math.round(power * speed * comboFactor));
 }
+
+export const HEAL_COMBO_STEP = 5;
+
+export function calcHeal(heal, combo) {
+    return combo > 0 && combo % HEAL_COMBO_STEP === 0 ? Math.max(1, Math.round(heal)) : 0;
+}

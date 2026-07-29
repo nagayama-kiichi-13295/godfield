@@ -6,6 +6,7 @@ use App\Events\MatchStarted;
 use App\Events\PlayerProgressed;
 use App\Models\GameMatch;
 use App\Models\Player;
+use App\Models\SoloRun;
 use App\Support\CurrentPlayer;
 use App\Support\Stats;
 use App\Support\WordList;
@@ -44,7 +45,7 @@ Route::get('/character', function (Request $request) {
             'player' => $player,
             'characters' => config('characters'),
             'stats' => $stats,
-            'cpus' => config('cpu'),
+            'stages' => config('stages'),
         ]),
         $player
     );
@@ -284,47 +285,105 @@ Route::get('/match/{matchId}/result', function (Request $request, string $matchI
     ]);
 });
 
-Route::get('/solo/{difficulty?}', function (Request $request, string $difficulty = 'normal') {
+Route::get('/solo/{stage?}', function (Request $request, string $stage = 'training') {
     $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
-    $stats = $player->currentStats();
-    $cpu = config('cpu.' . $difficulty) ?? config('cpu.normal');
+    $pc = $player->currentStats();
+    $conf = config('stages.' . $stage);
+
+    if (! $conf) {
+        return redirect('/character');
+    }
+
+    $run = SoloRun::create([
+        'player_id' => $player->id,
+        'character' => $pc->character,
+        'stage' => $stage,
+    ]);
 
     return CurrentPlayer::attach(
         response()->view('solo', [
             'player' => $player,
-            'me' => Stats::of($stats->character, $stats->level),
-            'level' => $stats->level,
-            'cpu' => $cpu,
-            'difficulty' => $difficulty,
+            'me' => Stats::of($pc->character, $pc->level),
+            'level' => $pc->level,
+            'stage' => $stage,
+            'stageConf' => $conf,
+            'runId' => $run->id,
             'words' => WordList::forMatch('solo-' . Str::random(8)),
         ]),
         $player
     );
 });
 
-Route::post('/solo/result', function (Request $request) {
+Route::post('/solo/defeat', function (Request $request) {
     $data = $request->validate([
-        'won' => ['required', 'boolean'],
-        'difficulty' => ['required', 'string'],
+        'run_id' => ['required', 'integer'],
+        'index' => ['required', 'integer', 'min:0', 'max:99'],
     ]);
 
     $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
-    $stats = $player->currentStats();
-    $cpu = config('cpu.' . $data['difficulty']) ?? config('cpu.normal');
+    $run = SoloRun::where('id', $data['run_id'])->where('player_id', $player->id)->first();
 
-    $gain = $data['won'] ? $cpu['exp_win'] : $cpu['exp_lose'];
+    if (! $run || $run->finished || $data['index'] !== $run->cleared) {
+        return response()->json(['ok' => false], 422);
+    }
+
+    $enemies = $run->stageConfig()['enemies'];
+
+    if (! isset($enemies[$data['index']])) {
+        return response()->json(['ok' => false], 422);
+    }
+
+    $gain = $enemies[$data['index']]['exp'];
+    $stats = $player->statsFor($run->character);
     $leveled = $stats->addExp($gain);
-    $stats->increment($data['won'] ? 'wins' : 'losses');
 
-    return CurrentPlayer::attach(
-        response()->json([
-            'character' => $stats->name(),
-            'gain' => $gain,
-            'level' => $stats->level,
-            'exp' => $stats->exp,
-            'required' => $stats->requiredExp(),
-            'leveled' => $leveled,
-        ]),
-        $player
-    );
+    $run->increment('cleared');
+    $run->increment('exp_gained', $gain);
+
+    return response()->json([
+        'gain' => $gain,
+        'level' => $stats->level,
+        'exp' => $stats->exp,
+        'required' => $stats->requiredExp(),
+        'leveled' => $leveled,
+    ]);
+});
+
+Route::post('/solo/finish', function (Request $request) {
+    $data = $request->validate(['run_id' => ['required', 'integer']]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $run = SoloRun::where('id', $data['run_id'])->where('player_id', $player->id)->first();
+
+    if (! $run || $run->finished) {
+        return response()->json(['ok' => false], 422);
+    }
+
+    $conf = $run->stageConfig();
+    $stats = $player->statsFor($run->character);
+    $cleared = $run->cleared >= count($conf['enemies']);
+    $bonus = 0;
+    $leveled = 0;
+
+    if ($cleared) {
+        $bonus = $conf['clear_bonus'];
+        $leveled = $stats->addExp($bonus);
+        $stats->increment('wins');
+        $run->increment('exp_gained', $bonus);
+    } else {
+        $stats->increment('losses');
+    }
+
+    $run->update(['finished' => true]);
+
+    return response()->json([
+        'cleared' => $cleared,
+        'bonus' => $bonus,
+        'total' => $run->exp_gained,
+        'character' => $stats->name(),
+        'level' => $stats->level,
+        'exp' => $stats->exp,
+        'required' => $stats->requiredExp(),
+        'leveled' => $leveled,
+    ]);
 });

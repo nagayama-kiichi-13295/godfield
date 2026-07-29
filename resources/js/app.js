@@ -1,5 +1,13 @@
 import './bootstrap';
 import { createTyping, countdown, canonicalRomaji } from './typing';
-import { calcDamage, BALANCE } from './damage';
+import { calcDamage, calcHeal, BALANCE, HEAL_COMBO_STEP } from './damage';
 
-window.Typing = { create: createTyping, countdown, canonicalRomaji, calcDamage, BALANCE };
+window.Typing = {
+    create: createTyping,
+    countdown,
+    canonicalRomaji,
+    calcDamage,
+    calcHeal,
+    BALANCE,
+    HEAL_COMBO_STEP,
+};

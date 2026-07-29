@@ -182,3 +182,21 @@ body {
     font-size: 15px;
     color: #e0a0a0;
 }
+
+.run-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+}
+
+.run-stage { font-weight: bold; }
+.run-progress { opacity: .7; }
+.run-timer { margin-left: auto; font-family: monospace; font-size: 20px; color: #ffd166; }
+
+.hp-num { margin-left: auto; font-size: 12px; opacity: .6; font-family: monospace; }
+
+.bar-fill.hit { filter: brightness(2.2); }
+
+.heal { font-size: 15px; color: #7fd18a; }

@@ -60,3 +60,4 @@ body {
 .mode-btn:hover { background: #46466e; }
 .mode-btn.online { background: #4CAF50; border-left-color: #4CAF50; }
 .mode-btn.online:hover { background: #45a049; }
+.mode-sub { display: block; font-size: 11px; opacity: .6; margin-top: 2px; }

@@ -33,7 +33,7 @@
                 <div class="cexp-text">{{ $s->exp }} / {{ $s->requiredExp() }}</div>
 
                 <div class="cdesc">{{ $c['desc'] }}</div>
-                <div class="cstat">HP {{ $s->maxHp() }} ／ 攻撃 {{ $s->power() }}</div>
+                <div class="cstat">HP {{ $s->maxHp() }} ／ 攻撃 {{ $s->power() }} ／ 知力 {{ \App\Support\Stats::of($key, $s->level)['int'] }}</div>
                 <div class="crecord">{{ $s->wins }}勝 {{ $s->losses }}敗</div>
 
                 <button type="submit" class="cbtn">
@@ -43,10 +43,12 @@
         @endforeach
     </div>
 
-    <h2 class="subtitle">ひとりで練習</h2>
+    <h2 class="subtitle">連戦に挑む</h2>
     <div class="modes">
-        @foreach ($cpus as $key => $cpu)
-            <a class="mode-btn" href="/solo/{{ $key }}" style="--c: {{ $cpu['color'] }}">{{ $cpu['label'] }}</a>
+        @foreach ($stages as $key => $st)
+            <a class="mode-btn" href="/solo/{{ $key }}" style="--c: {{ $st['color'] }}">
+                {{ $st['label'] }}<span class="mode-sub">{{ count($st['enemies']) }} 体</span>
+            </a>
         @endforeach
     </div>
 
