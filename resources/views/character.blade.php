@@ -12,13 +12,12 @@
     <p class="player-info">{{ $player->name }} さん</p>
 
     <div class="cards">
-        @foreach ($characters as $key => $c)
-            @php $s = $stats[$key]; @endphp
-            <form method="POST" action="/character"
-                  class="card {{ $player->character === $key ? 'selected' : '' }}"
-                  style="--c: {{ $c['color'] }}">
-                @csrf
-                <input type="hidden" name="character" value="{{ $key }}">
+        @foreach ($characters as $charKey => $c)
+            @php
+                $s = $stats[$charKey];
+                $st = $s->stats();
+            @endphp
+            <div class="card {{ $player->character === $charKey ? 'selected' : '' }}" style="--c: {{ $c['color'] }}">
 
                 <div class="emblem-box">
                     @include('partials.icon', ['icon' => $c['icon'], 'color' => $c['color'], 'size' => 56])
@@ -33,21 +32,61 @@
                 <div class="cexp-text">{{ $s->exp }} / {{ $s->requiredExp() }}</div>
 
                 <div class="cdesc">{{ $c['desc'] }}</div>
-                <div class="cstat">HP {{ $s->maxHp() }} ／ 攻撃 {{ $s->power() }} ／ 知力 {{ \App\Support\Stats::of($key, $s->level)['int'] }}</div>
+
+                <div class="alloc">
+                    @foreach ($growth['labels'] as $stat => $label)
+                        <div class="alloc-row">
+                            <span class="alloc-label">{{ $label }}</span>
+                            <span class="alloc-value">{{ $st[$stat === 'hp' ? 'max_hp' : $stat] }}</span>
+                            <span class="alloc-pt">+{{ $s->{'pt_' . $stat} }}</span>
+
+                            <form method="POST" action="/character/allocate">
+                                @csrf
+                                <input type="hidden" name="character" value="{{ $charKey }}">
+                                <input type="hidden" name="stat" value="{{ $stat }}">
+                                <input type="hidden" name="amount" value="-1">
+                                <button class="pt-btn" @disabled($s->{'pt_' . $stat} < 1)>−</button>
+                            </form>
+
+                            <form method="POST" action="/character/allocate">
+                                @csrf
+                                <input type="hidden" name="character" value="{{ $charKey }}">
+                                <input type="hidden" name="stat" value="{{ $stat }}">
+                                <input type="hidden" name="amount" value="1">
+                                <button class="pt-btn" @disabled($s->points < 1)>＋</button>
+                            </form>
+                        </div>
+                    @endforeach
+
+                    <div class="alloc-foot">
+                        <span class="remain {{ $s->points > 0 ? 'has' : '' }}">残 {{ $s->points }} pt</span>
+
+                        <form method="POST" action="/character/reset">
+                            @csrf
+                            <input type="hidden" name="character" value="{{ $charKey }}">
+                            <button class="reset-btn" @disabled($s->pt_hp + $s->pt_power + $s->pt_int < 1)>振り直し</button>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="crecord">{{ $s->wins }}勝 {{ $s->losses }}敗</div>
 
-                <button type="submit" class="cbtn">
-                    {{ $player->character === $key ? '選択中' : 'これにする' }}
-                </button>
-            </form>
+                <form method="POST" action="/character">
+                    @csrf
+                    <input type="hidden" name="character" value="{{ $charKey }}">
+                    <button type="submit" class="cbtn">
+                        {{ $player->character === $charKey ? '選択中' : 'これにする' }}
+                    </button>
+                </form>
+            </div>
         @endforeach
     </div>
 
     <h2 class="subtitle">連戦に挑む</h2>
     <div class="modes">
-        @foreach ($stages as $key => $st)
-            <a class="mode-btn" href="/solo/{{ $key }}" style="--c: {{ $st['color'] }}">
-                {{ $st['label'] }}<span class="mode-sub">{{ count($st['enemies']) }} 体</span>
+        @foreach ($stages as $stageKey => $stage)
+            <a class="mode-btn" href="/solo/{{ $stageKey }}" style="--c: {{ $stage['color'] }}">
+                {{ $stage['label'] }}<span class="mode-sub">{{ count($stage['enemies']) }} 体</span>
             </a>
         @endforeach
     </div>

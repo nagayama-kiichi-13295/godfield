@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
-Route::get('/', fn () => view('title'));
+Route::get('/', fn() => view('title'));
 
-Route::get('/player', fn () => view('player'));
+Route::get('/player', fn() => view('player'));
 
 Route::post('/player', function (Request $request) {
     $request->validate(['name' => ['required', 'string', 'max:20']]);
@@ -46,6 +46,7 @@ Route::get('/character', function (Request $request) {
             'characters' => config('characters'),
             'stats' => $stats,
             'stages' => config('stages'),
+            'growth' => config('growth'),
         ]),
         $player
     );
@@ -59,6 +60,34 @@ Route::post('/character', function (Request $request) {
     if (array_key_exists($data['character'], config('characters'))) {
         $player->update(['character' => $data['character']]);
         $player->statsFor($data['character']);
+    }
+
+    return CurrentPlayer::attach(redirect('/character'), $player);
+});
+
+Route::post('/character/allocate', function (Request $request) {
+    $data = $request->validate([
+        'character' => ['required', 'string'],
+        'stat' => ['required', 'string'],
+        'amount' => ['required', 'integer', 'in:1,-1'],
+    ]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (array_key_exists($data['character'], config('characters'))) {
+        $player->statsFor($data['character'])->allocate($data['stat'], $data['amount']);
+    }
+
+    return CurrentPlayer::attach(redirect('/character'), $player);
+});
+
+Route::post('/character/reset', function (Request $request) {
+    $data = $request->validate(['character' => ['required', 'string']]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (array_key_exists($data['character'], config('characters'))) {
+        $player->statsFor($data['character'])->resetPoints();
     }
 
     return CurrentPlayer::attach(redirect('/character'), $player);
@@ -101,6 +130,7 @@ Route::post('/matching/join', function (Request $request) {
                 'player2' => $player->name,
                 'player2_char' => $stats->character,
                 'player2_level' => $stats->level,
+                'player2_stas' => $stats->stats(),
                 'status' => 'playing',
             ]);
 
@@ -116,6 +146,7 @@ Route::post('/matching/join', function (Request $request) {
             'player1' => $player->name,
             'player1_char' => $stats->character,
             'player1_level' => $stats->level,
+            'player1_stats' => $stats->stats(),
             'status' => 'waiting',
         ]), 'player1'];
     });
@@ -166,14 +197,17 @@ Route::get('/match/{matchId}', function (Request $request, string $matchId) {
 
     $isP1 = $match->player1_id === $player->id;
 
-    $me = Stats::of(
-        $isP1 ? $match->player1_char : $match->player2_char,
-        $isP1 ? $match->player1_level : $match->player2_level
-    );
-    $opp = Stats::of(
-        $isP1 ? $match->player2_char : $match->player1_char,
-        $isP1 ? $match->player2_level : $match->player1_level
-    );
+    $me = ($isP1 ? $match->player1_stats : $match->player2_stats)
+        ?? Stats::of(
+            $isP1 ? $match->player1_char : $match->player2_char,
+            $isP1 ? $match->player1_level : $match->player2_level
+        );
+
+    $opp = ($isP1 ? $match->player2_stats : $match->player1_stats)
+        ?? Stats::of(
+            $isP1 ? $match->player2_char : $match->player1_char,
+            $isP1 ? $match->player2_level : $match->player1_level
+        );
 
     return CurrentPlayer::attach(
         response()->view('match', [
@@ -303,7 +337,7 @@ Route::get('/solo/{stage?}', function (Request $request, string $stage = 'traini
     return CurrentPlayer::attach(
         response()->view('solo', [
             'player' => $player,
-            'me' => Stats::of($pc->character, $pc->level),
+            'me' => $pc->stats(),
             'level' => $pc->level,
             'stage' => $stage,
             'stageConf' => $conf,
