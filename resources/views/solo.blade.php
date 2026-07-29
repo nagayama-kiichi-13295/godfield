@@ -27,6 +27,7 @@
 
         <div class="stage">
             <div class="display" id="display">準備中</div>
+            <div class="reading" id="reading"></div>
             <div class="roma" id="roma"></div>
         </div>
 
@@ -71,9 +72,10 @@
                 cpuTimer = null,
                 cpuIdx = 0;
 
-            const typing = window.createTyping({
+            const typing = window.Typing.create({
                 words,
                 displayEl: document.getElementById('display'),
+                readingEl: document.getElementById('reading'),
                 romaEl: roma,
                 onMiss: () => {
                     roma.classList.add('miss');
@@ -125,7 +127,8 @@
 
             function scheduleCpu() {
                 const w = words[cpuIdx % words.length];
-                const wait = (w.r.length / CPU_SPEED) * 1000 * (0.8 + Math.random() * 0.4);
+                const len = window.Typing.canonicalRomaji(w.k).length;
+                const wait = (len / CPU_SPEED) * 1000 * (0.8 + Math.random() * 0.4);
 
                 cpuTimer = setTimeout(() => {
                     if (finished) return;
@@ -152,7 +155,7 @@
                 startBtn.style.display = 'none';
                 overlay.style.display = 'flex';
 
-                window.countdown(
+                window.Typing.countdown(
                     Date.now() + 3000,
                     (sec) => {
                         overlayText.textContent = sec;

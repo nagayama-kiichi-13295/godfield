@@ -151,3 +151,10 @@ body {
 .home-btn:hover {
     background: #46466e;
 }
+
+.reading {
+    font-size: 20px;
+    color: #a0a0c0;
+    letter-spacing: .15em;
+    margin-bottom: 18px;
+}

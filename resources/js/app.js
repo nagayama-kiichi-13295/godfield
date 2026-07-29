@@ -1,5 +1,8 @@
 import './bootstrap';
-import { createTyping, countdown } from './typing';
+import { createTyping, countdown, canonicalRomaji } from './typing';
 
-window.createTyping = createTyping;
-window.countdown = countdown;
+window.Typing = { 
+    create: createTyping, 
+    countdown, 
+    canonicalRomaji 
+};

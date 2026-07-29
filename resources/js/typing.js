@@ -1,48 +1,58 @@
-export function createTyping({ words, displayEl, romaEl, onWord, onMiss }) {
+import { createMatcher, canonicalRomaji } from './romaji';
+
+export { canonicalRomaji };
+
+export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMiss }) {
     let idx = 0;
-    let pos = 0;
     let completed = 0;
     let active = false;
+    let matcher = createMatcher(words[0].k);
 
     function render() {
         const w = words[idx];
         if (!w) return;
 
         displayEl.textContent = w.d;
+        if (readingEl) readingEl.textContent = w.k;
+
+        const { typed, rest } = matcher.hint();
+
         romaEl.textContent = '';
 
         const done = document.createElement('span');
         done.className = 'done';
-        done.textContent = w.r.slice(0, pos);
+        done.textContent = typed;
 
-        const rest = document.createElement('span');
-        rest.textContent = w.r.slice(pos);
+        const remain = document.createElement('span');
+        remain.textContent = rest;
 
-        romaEl.append(done, rest);
+        romaEl.append(done, remain);
+    }
+
+    function loadWord(i) {
+        idx = i % words.length;
+        matcher = createMatcher(words[idx].k);
     }
 
     function onKey(e) {
         if (!active) return;
-        if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-        const w = words[idx];
-        if (!w) return;
+        const key = e.key.toLowerCase();
+        if (!/^[a-z0-9-]$/.test(key)) return;
 
-        if (e.key !== w.r[pos]) {
+        if (!matcher.input(key)) {
             if (onMiss) onMiss();
             return;
         }
 
-        pos++;
-
-        if (pos < w.r.length) {
+        if (!matcher.done) {
             render();
             return;
         }
 
-        idx = (idx + 1) % words.length;
-        pos = 0;
-        completed++;
+        completed += 1;
+        loadWord(idx + 1);
 
         if (onWord) onWord(completed);
         if (active) render();
@@ -53,8 +63,9 @@ export function createTyping({ words, displayEl, romaEl, onWord, onMiss }) {
     return {
         start() { active = true; render(); },
         stop() { active = false; },
-        reset() { idx = 0; pos = 0; completed = 0; },
+        reset() { completed = 0; loadWord(0); render(); },
         render,
+        destroy() { active = false; document.removeEventListener('keydown', onKey); },
     };
 }
 
