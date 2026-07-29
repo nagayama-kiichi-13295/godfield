@@ -23,17 +23,21 @@ body {
     flex: 1;
 }
 
-.bar-label {
-    font-size: 14px;
+.bar-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 6px;
-    opacity: .8;
 }
+
+.bar-label { font-size: 14px; opacity: .85; }
 
 .bar {
     height: 22px;
     background: #12121f;
     border-radius: 11px;
     overflow: hidden;
+    border: 1px solid var(--c, transparent);
 }
 
 .bar-fill {

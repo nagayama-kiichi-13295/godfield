@@ -11,14 +11,20 @@
 <body>
     <div class="arena">
         <div class="bars">
-            <div class="bar-block">
-                <div class="bar-label">{{ $player->name }}（{{ $characterName }} Lv.{{ $level }}）</div>
+            <div class="bar-block" style="--c: {{ $me['color'] }}">
+                <div class="bar-head">
+                    @include('partials.icon', ['icon' => $me['icon'], 'color' => $me['color'], 'size' => 26])
+                    <span class="bar-label">{{ $player->name }}（{{ $me['name'] }} Lv.{{ $level }}）</span>
+                </div>
                 <div class="bar">
                     <div class="bar-fill me" id="hp-me"></div>
                 </div>
             </div>
-            <div class="bar-block">
-                <div class="bar-label">CPU（{{ $cpu['label'] }}）</div>
+            <div class="bar-block" style="--c: {{ $cpu['color'] }}">
+                <div class="bar-head">
+                    @include('partials.icon', ['icon' => 'cpu', 'color' => $cpu['color'], 'size' => 26])
+                    <span class="bar-label">CPU（{{ $cpu['label'] }}）</span>
+                </div>
                 <div class="bar">
                     <div class="bar-fill you" id="hp-you"></div>
                 </div>
@@ -36,7 +42,7 @@
         </div>
 
         <div class="footer">
-            <span class="status">攻撃 {{ $power }} ／ HP {{ $maxHp }}</span>
+            <span class="status">攻撃 {{ $me['power'] }} ／ HP {{ $me['max_hp'] }}</span>
         </div>
 
         <div class="overlay" id="overlay">
@@ -55,8 +61,8 @@
         window.addEventListener('DOMContentLoaded', () => {
             const words = @json($words);
             const difficulty = @json($difficulty);
-            const MY_MAX = @json($maxHp);
-            const MY_POWER = @json($power);
+            const MY_MAX = @json($me['max_hp']);
+            const MY_POWER = @json($me['power']);
             const CPU_MAX = @json($cpu['hp']);
             const CPU_POWER = @json($cpu['power']);
             const CPU_SPEED = @json($cpu['speed']);

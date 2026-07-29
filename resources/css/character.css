@@ -6,30 +6,57 @@ body {
     font-family: sans-serif;
 }
 
-.wrap { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
-.title { text-align: center; font-size: 32px; margin-bottom: 20px; }
-.subtitle { font-size: 18px; margin: 40px 0 14px; opacity: .85; }
+.wrap { max-width: 940px; margin: 0 auto; padding: 40px 20px 80px; }
+.title { text-align: center; font-size: 32px; margin-bottom: 12px; }
+.subtitle { font-size: 18px; margin: 44px 0 14px; opacity: .85; }
+.player-info { text-align: center; font-size: 14px; opacity: .75; margin-bottom: 30px; }
 
-.player-info { text-align: center; font-size: 14px; opacity: .75; margin-bottom: 28px; }
-
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
 
 .card {
     background: #24243e;
-    border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 18px;
+    border: 2px solid #2f2f4d;
+    border-radius: 14px;
+    padding: 20px 18px;
     text-align: center;
+    transition: border-color .15s, transform .15s;
 }
-.card.selected { border-color: #4CAF50; }
+.card:hover { transform: translateY(-3px); }
+.card.selected { border-color: var(--c); box-shadow: 0 0 18px -6px var(--c); }
+
+.emblem-box {
+    width: 84px; height: 84px; margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: #1b1b2f;
+    border: 2px solid var(--c);
+}
 
 .cname { font-size: 20px; }
-.clevel { font-size: 15px; color: #ffd166; margin: 4px 0 10px; }
+.clevel { font-size: 15px; color: var(--c); margin: 4px 0 10px; font-weight: bold; }
 
 .cexp { height: 6px; background: #12121f; border-radius: 3px; overflow: hidden; }
 .cexp-fill { height: 100%; background: #ffd166; }
 .cexp-text { font-size: 11px; opacity: .55; margin: 4px 0 10px; }
 
 .cdesc { font-size: 13px; opacity: .7; min-height: 36px; }
-.cstat { font-size: 13px; color: #8bd; margin-top: 8px; }
+.cstat { font-size: 13px; color: #9ab; margin-top: 8px; }
 .crecord { font-size: 12px; opacity: .55; margin: 6px 0 14px; }
+
+.cbtn {
+    width: 100%; padding: 10px; font-size: 14px; color: #fff;
+    background: #3a3a5c; border: none; border-radius: 8px; cursor: pointer;
+}
+.cbtn:hover { background: #46466e; }
+.card.selected .cbtn { background: var(--c); }
+
+.modes { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.mode-btn {
+    padding: 12px 28px; font-size: 16px; color: #fff;
+    background: #3a3a5c; border-radius: 10px; text-decoration: none;
+    border-left: 4px solid var(--c, #3a3a5c);
+}
+.mode-btn:hover { background: #46466e; }
+.mode-btn.online { background: #4CAF50; border-left-color: #4CAF50; }
+.mode-btn.online:hover { background: #45a049; }

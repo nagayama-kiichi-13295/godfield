@@ -11,14 +11,20 @@
 <body>
     <div class="arena">
         <div class="bars">
-            <div class="bar-block">
-                <div class="bar-label">{{ $meName }}（{{ $me['name'] }} Lv.{{ $meLevel }}）</div>
+            <div class="bar-block" style="--c: {{ $me['color'] }}">
+                <div class="bar-head">
+                    @include('partials.icon', ['icon' => $me['icon'], 'color' => $me['color'], 'size' => 26])
+                    <span class="bar-label">{{ $meName }}（{{ $me['name'] }} Lv.{{ $meLevel }}）</span>
+                </div>
                 <div class="bar">
                     <div class="bar-fill me" id="hp-me"></div>
                 </div>
             </div>
-            <div class="bar-block">
-                <div class="bar-label">{{ $oppName }}（{{ $opp['name'] }} Lv.{{ $oppLevel }}）</div>
+            <div class="bar-block" style="--c: {{ $opp['color'] }}">
+                <div class="bar-head">
+                    @include('partials.icon', ['icon' => $opp['icon'], 'color' => $opp['color'], 'size' => 26])
+                    <span class="bar-label">{{ $oppName }}（{{ $opp['name'] }} Lv.{{ $oppLevel }}）</span>
+                </div>
                 <div class="bar">
                     <div class="bar-fill you" id="hp-you"></div>
                 </div>

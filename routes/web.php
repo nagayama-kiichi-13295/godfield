@@ -292,10 +292,8 @@ Route::get('/solo/{difficulty?}', function (Request $request, string $difficulty
     return CurrentPlayer::attach(
         response()->view('solo', [
             'player' => $player,
-            'characterName' => $stats->name(),
+            'me' => Stats::of($stats->character, $stats->level),
             'level' => $stats->level,
-            'maxHp' => $stats->maxHp(),
-            'power' => $stats->power(),
             'cpu' => $cpu,
             'difficulty' => $difficulty,
             'words' => WordList::forMatch('solo-' . Str::random(8)),
