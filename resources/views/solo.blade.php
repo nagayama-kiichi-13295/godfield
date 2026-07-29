@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>ひとりで練習</title>
-    @vite(['resources/css/match.css'])
+    @vite(['resources/css/match.css', 'resources/js/app.js'])
 </head>
 
 <body>
@@ -57,7 +57,6 @@
             const CPU_SPEED = @json($cpu['speed']);
             const token = document.querySelector('meta[name=csrf-token]').content;
 
-            const display = document.getElementById('display');
             const roma = document.getElementById('roma');
             const overlay = document.getElementById('overlay');
             const overlayText = document.getElementById('overlay-text');
@@ -66,27 +65,26 @@
             const hpMeEl = document.getElementById('hp-me');
             const hpYouEl = document.getElementById('hp-you');
 
-            let idx = 0,
-                pos = 0,
-                myHp = MY_MAX,
+            let myHp = MY_MAX,
                 cpuHp = CPU_MAX;
-            let playing = false,
-                finished = false,
+            let finished = false,
                 cpuTimer = null,
                 cpuIdx = 0;
 
-            function render() {
-                const w = words[idx];
-                if (!w) return;
-                display.textContent = w.d;
-                roma.textContent = '';
-                const done = document.createElement('span');
-                done.className = 'done';
-                done.textContent = w.r.slice(0, pos);
-                const rest = document.createElement('span');
-                rest.textContent = w.r.slice(pos);
-                roma.append(done, rest);
-            }
+            const typing = window.createTyping({
+                words,
+                displayEl: document.getElementById('display'),
+                romaEl: roma,
+                onMiss: () => {
+                    roma.classList.add('miss');
+                    setTimeout(() => roma.classList.remove('miss'), 120);
+                },
+                onWord: () => {
+                    cpuHp -= MY_POWER;
+                    updateHp();
+                    if (cpuHp <= 0) finish(true);
+                },
+            });
 
             function updateHp() {
                 hpMeEl.style.width = Math.max(0, myHp / MY_MAX * 100) + '%';
@@ -94,9 +92,11 @@
             }
 
             async function finish(won) {
+                if (finished) return;
                 finished = true;
-                playing = false;
+                typing.stop();
                 clearTimeout(cpuTimer);
+
                 overlay.style.display = 'flex';
                 overlayText.textContent = won ? '勝ち' : '負け';
                 startBtn.style.display = 'none';
@@ -110,8 +110,8 @@
                             'X-CSRF-TOKEN': token
                         },
                         body: JSON.stringify({
-                            won: won,
-                            difficulty: difficulty
+                            won,
+                            difficulty
                         }),
                     });
                     const d = await res.json();
@@ -125,11 +125,10 @@
 
             function scheduleCpu() {
                 const w = words[cpuIdx % words.length];
-                const base = (w.r.length / CPU_SPEED) * 1000;
-                const wait = base * (0.8 + Math.random() * 0.4);
+                const wait = (w.r.length / CPU_SPEED) * 1000 * (0.8 + Math.random() * 0.4);
 
                 cpuTimer = setTimeout(() => {
-                    if (!playing) return;
+                    if (finished) return;
                     cpuIdx++;
                     myHp -= CPU_POWER;
                     updateHp();
@@ -142,58 +141,29 @@
             }
 
             function begin() {
-                idx = 0;
-                pos = 0;
+                finished = false;
                 myHp = MY_MAX;
                 cpuHp = CPU_MAX;
                 cpuIdx = 0;
-                finished = false;
+                typing.reset();
                 updateHp();
+
                 overlaySub.textContent = '';
                 startBtn.style.display = 'none';
+                overlay.style.display = 'flex';
 
-                let count = 3;
-                overlayText.textContent = count;
-
-                const t = setInterval(() => {
-                    count--;
-                    if (count <= 0) {
-                        clearInterval(t);
+                window.countdown(
+                    Date.now() + 3000,
+                    (sec) => {
+                        overlayText.textContent = sec;
+                    },
+                    () => {
                         overlay.style.display = 'none';
-                        playing = true;
-                        render();
+                        typing.start();
                         scheduleCpu();
-                        return;
                     }
-                    overlayText.textContent = count;
-                }, 1000);
+                );
             }
-
-            document.addEventListener('keydown', (e) => {
-                if (!playing || e.key.length !== 1) return;
-                const w = words[idx];
-                if (!w) return;
-
-                if (e.key === w.r[pos]) {
-                    pos++;
-                    if (pos >= w.r.length) {
-                        idx = (idx + 1) % words.length;
-                        pos = 0;
-                        cpuHp -= MY_POWER;
-                        updateHp();
-                        if (cpuHp <= 0) {
-                            finish(true);
-                            return;
-                        }
-                        render();
-                    } else {
-                        render();
-                    }
-                } else {
-                    roma.classList.add('miss');
-                    setTimeout(() => roma.classList.remove('miss'), 120);
-                }
-            });
 
             startBtn.addEventListener('click', () => {
                 startBtn.blur();

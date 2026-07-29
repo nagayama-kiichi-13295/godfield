@@ -63,7 +63,6 @@
         const playerKey = makePlayerKey();
         const token = document.querySelector('meta[name=csrf-token]').content;
 
-        const display = document.getElementById('display');
         const roma = document.getElementById('roma');
         const status = document.getElementById('status');
         const overlay = document.getElementById('overlay');
@@ -74,23 +73,24 @@
         const hpMeEl = document.getElementById('hp-me');
         const hpYouEl = document.getElementById('hp-you');
 
-        let idx = 0, pos = 0, myDone = 0, oppDone = 0;
-        let playing = false, finished = false;
+        let myDone = 0, oppDone = 0, finished = false;
 
         homeBtn.style.display = 'none';
 
-        function render() {
-            const w = words[idx];
-            if (!w) return;
-            display.textContent = w.d;
-            roma.textContent = '';
-            const done = document.createElement('span');
-            done.className = 'done';
-            done.textContent = w.r.slice(0, pos);
-            const rest = document.createElement('span');
-            rest.textContent = w.r.slice(pos);
-            roma.append(done, rest);
-        }
+        const typing = window.createTyping({
+            words,
+            displayEl: document.getElementById('display'),
+            romaEl: roma,
+            onMiss: () => {
+                roma.classList.add('miss');
+                setTimeout(() => roma.classList.remove('miss'), 120);
+            },
+            onWord: (count) => {
+                myDone = count;
+                sendProgress();
+                checkFinish();
+            },
+        });
 
         function updateHp() {
             const hpMe = Math.max(0, MY_MAX - oppDone * OPP_POWER);
@@ -120,7 +120,7 @@
 
         function showResult(iWon) {
             finished = true;
-            playing = false;
+            typing.stop();
             overlay.style.display = 'flex';
             overlayText.textContent = iWon ? '勝ち' : '負け';
             overlaySub.textContent = '結果を集計中...';
@@ -163,49 +163,25 @@
 
         function beginAt(startAt) {
             finished = false;
-            idx = 0; pos = 0; myDone = 0; oppDone = 0;
+            myDone = 0;
+            oppDone = 0;
+            typing.reset();
             updateHp();
+
             overlay.style.display = 'flex';
             overlaySub.textContent = '';
             startBtn.style.display = 'none';
             homeBtn.style.display = 'none';
 
-            const tick = () => {
-                const left = startAt - Date.now();
-                if (left <= 0) {
+            window.countdown(
+                startAt,
+                (sec) => { overlayText.textContent = sec; },
+                () => {
                     overlay.style.display = 'none';
-                    playing = true;
-                    render();
-                    return;
+                    typing.start();
                 }
-                overlayText.textContent = Math.ceil(left / 1000);
-                requestAnimationFrame(tick);
-            };
-            tick();
+            );
         }
-
-        document.addEventListener('keydown', (e) => {
-            if (!playing || e.key.length !== 1) return;
-            const w = words[idx];
-            if (!w) return;
-
-            if (e.key === w.r[pos]) {
-                pos++;
-                if (pos >= w.r.length) {
-                    idx = (idx + 1) % words.length;
-                    pos = 0;
-                    myDone++;
-                    sendProgress();
-                    checkFinish();
-                    if (!finished) render();
-                } else {
-                    render();
-                }
-            } else {
-                roma.classList.add('miss');
-                setTimeout(() => roma.classList.remove('miss'), 120);
-            }
-        });
 
         startBtn.addEventListener('click', async () => {
             startBtn.blur();
