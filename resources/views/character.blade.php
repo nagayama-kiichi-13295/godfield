@@ -95,6 +95,10 @@
     <div class="modes">
         <a class="mode-btn online" href="/matching">対戦相手を探す</a>
     </div>
+    
+    <div class="modes" style="margin-top: 30px">
+        <a class="mode-btn" href="/record">戦績を見る</a>
+    </div>
 </div>
 </body>
 </html>

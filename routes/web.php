@@ -432,3 +432,66 @@ Route::post('/solo/finish', function (Request $request) {
         'leveled' => $leveled,
     ]);
 });
+
+Route::get('/record', function (Request $request) {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (! $player->name) {
+        return CurrentPlayer::attach(redirect('/player'), $player);
+    }
+
+    $stages = config('stages');
+    $chars = config('characters');
+
+    $best = $player->runs()
+        ->select('stage', DB::raw('MAX(cleared) as best'), DB::raw('COUNT(*) as plays'))
+        ->groupBy('stage')
+        ->get()
+        ->keyBy('stage');
+
+    $rows = [];
+
+    foreach ($stages as $key => $st) {
+        $total = count($st['enemies']) + (empty($st['boss']) ? 0 : 1);
+        $r = $best->get($key);
+
+        $rows[] = [
+            'label' => $st['label'],
+            'color' => $st['color'],
+            'total' => $total,
+            'best' => (int) ($r->best ?? 0),
+            'plays' => (int) ($r->plays ?? 0),
+            'cleared' => (int) ($r->best ?? 0) >= $total,
+        ];
+    }
+
+    $charStats = [];
+
+    foreach ($chars as $key => $c) {
+        $pc = $player->statsFor($key);
+
+        $charStats[] = [
+            'name' => $c['name'],
+            'color' => $c['color'],
+            'icon' => $c['icon'],
+            'level' => $pc->level,
+            'wins' => $pc->wins,
+            'losses' => $pc->losses,
+            'stats' => $pc->stats(),
+        ];
+    }
+
+    return CurrentPlayer::attach(
+        response()->view('record', [
+            'player' => $player,
+            'rows' => $rows,
+            'charStats' => $charStats,
+            'totalRuns' => $player->runs()->count(),
+            'totalExp' => (int) $player->runs()->sum('exp_gained'),
+            'recent' => $player->runs()->latest('id')->take(10)->get(),
+            'stages' => $stages,
+            'chars' => $chars,
+        ]),
+        $player
+    );
+});

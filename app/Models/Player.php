@@ -14,6 +14,11 @@ class Player extends Model
         return $this->hasMany(PlayerCharacter::class);
     }
 
+    public function runs(): HasMany
+    {
+        return $this->hasMany(SoloRun::class);
+    }
+
     public function statsFor(string $key): PlayerCharacter
     {
         return $this->characters()->firstOrCreate(['character' => $key]);
