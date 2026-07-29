@@ -3,50 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Player extends Model
 {
-    protected $fillable = ['token', 'name', 'character', 'level', 'exp', 'wins', 'losses'];
+    protected $fillable = ['token', 'name', 'character'];
 
-    public function config(): array
+    public function characters(): HasMany
     {
-        $all = config('characters');
-
-        return $all[$this->character] ?? reset($all);
+        return $this->hasMany(PlayerCharacter::class);
     }
 
-    public function maxHp(): int
+    public function statsFor(string $key): PlayerCharacter
     {
-        $c = $this->config();
-
-        return (int) round($c['base_hp'] + $c['hp_growth'] * ($this->level - 1));
+        return $this->characters()->firstOrCreate(['character' => $key]);
     }
 
-    public function power(): int
+    public function currentStats(): PlayerCharacter
     {
-        $c = $this->config();
+        $key = $this->character ?: array_key_first(config('characters'));
 
-        return (int) round($c['base_power'] + $c['power_growth'] * ($this->level - 1));
-    }
-
-    public function requiredExp(): int
-    {
-        return $this->level * 100;
-    }
-
-    public function addExp(int $amount): int
-    {
-        $gained = 0;
-        $this->exp += $amount;
-
-        while ($this->exp >= $this->requiredExp() && $this->level < 99) {
-            $this->exp -= $this->requiredExp();
-            $this->level++;
-            $gained++;
-        }
-
-        $this->save();
-
-        return $gained;
+        return $this->statsFor($key);
     }
 }

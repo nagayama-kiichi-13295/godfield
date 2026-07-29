@@ -10,11 +10,7 @@ body {
 .title { text-align: center; font-size: 32px; margin-bottom: 20px; }
 .subtitle { font-size: 18px; margin: 40px 0 14px; opacity: .85; }
 
-.player-info {
-    display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
-    font-size: 14px; opacity: .8; margin-bottom: 30px;
-}
-.plevel { color: #ffd166; }
+.player-info { text-align: center; font-size: 14px; opacity: .75; margin-bottom: 28px; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
 
@@ -27,23 +23,13 @@ body {
 }
 .card.selected { border-color: #4CAF50; }
 
-.cname { font-size: 20px; margin-bottom: 8px; }
+.cname { font-size: 20px; }
+.clevel { font-size: 15px; color: #ffd166; margin: 4px 0 10px; }
+
+.cexp { height: 6px; background: #12121f; border-radius: 3px; overflow: hidden; }
+.cexp-fill { height: 100%; background: #ffd166; }
+.cexp-text { font-size: 11px; opacity: .55; margin: 4px 0 10px; }
+
 .cdesc { font-size: 13px; opacity: .7; min-height: 36px; }
-.cstat { font-size: 13px; color: #8bd; margin: 10px 0 14px; }
-
-.cbtn {
-    width: 100%; padding: 10px; font-size: 14px; color: #fff;
-    background: #3a3a5c; border: none; border-radius: 8px; cursor: pointer;
-}
-.cbtn:hover { background: #46466e; }
-.card.selected .cbtn { background: #4CAF50; }
-
-.modes { display: flex; gap: 12px; flex-wrap: wrap; }
-
-.mode-btn {
-    padding: 12px 28px; font-size: 16px; color: #fff;
-    background: #3a3a5c; border-radius: 10px; text-decoration: none;
-}
-.mode-btn:hover { background: #46466e; }
-.mode-btn.online { background: #4CAF50; }
-.mode-btn.online:hover { background: #45a049; }
+.cstat { font-size: 13px; color: #8bd; margin-top: 8px; }
+.crecord { font-size: 12px; opacity: .55; margin: 6px 0 14px; }

@@ -161,10 +161,16 @@ Route::post('/match/{matchId}/finish', function (string $matchId) {
 Route::get('/character', function (Request $request) {
     $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
 
+    $stats = [];
+    foreach (array_keys(config('characters')) as $key) {
+        $stats[$key] = $player->statsFor($key);
+    }
+
     return CurrentPlayer::attach(
         response()->view('character', [
             'player' => $player,
             'characters' => config('characters'),
+            'stats' => $stats,
             'cpus' => config('cpu'),
         ]),
         $player
@@ -178,6 +184,7 @@ Route::post('/character', function (Request $request) {
 
     if (array_key_exists($data['character'], config('characters'))) {
         $player->update(['character' => $data['character']]);
+        $player->statsFor($data['character']);
     }
 
     return CurrentPlayer::attach(redirect('/character'), $player);
@@ -185,14 +192,16 @@ Route::post('/character', function (Request $request) {
 
 Route::get('/solo/{difficulty?}', function (Request $request, string $difficulty = 'normal') {
     $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $stats = $player->currentStats();
     $cpu = config('cpu.' . $difficulty) ?? config('cpu.normal');
 
     return CurrentPlayer::attach(
         response()->view('solo', [
             'player' => $player,
-            'characterName' => $player->config()['name'],
-            'maxHp' => $player->maxHp(),
-            'power' => $player->power(),
+            'characterName' => $stats->name(),
+            'level' => $stats->level,
+            'maxHp' => $stats->maxHp(),
+            'power' => $stats->power(),
             'cpu' => $cpu,
             'difficulty' => $difficulty,
             'words' => WordList::forMatch('solo-' . Str::random(8)),
@@ -208,19 +217,20 @@ Route::post('/solo/result', function (Request $request) {
     ]);
 
     $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $stats = $player->currentStats();
     $cpu = config('cpu.' . $data['difficulty']) ?? config('cpu.normal');
 
     $gain = $data['won'] ? $cpu['exp_win'] : $cpu['exp_lose'];
-    $leveled = $player->addExp($gain);
-
-    $player->increment($data['won'] ? 'wins' : 'losses');
+    $leveled = $stats->addExp($gain);
+    $stats->increment($data['won'] ? 'wins' : 'losses');
 
     return CurrentPlayer::attach(
         response()->json([
+            'character' => $stats->name(),
             'gain' => $gain,
-            'level' => $player->level,
-            'exp' => $player->exp,
-            'required' => $player->requiredExp(),
+            'level' => $stats->level,
+            'exp' => $stats->exp,
+            'required' => $stats->requiredExp(),
             'leveled' => $leveled,
         ]),
         $player

@@ -11,25 +11,27 @@
 <body>
     <div class="wrap">
         <h1 class="title">キャラクター選択</h1>
-
-        <div class="player-info">
-            <span class="pname">{{ $player->name }}</span>
-            <span class="plevel">Lv.{{ $player->level }}</span>
-            <span class="pexp">EXP {{ $player->exp }} / {{ $player->requiredExp() }}</span>
-            <span class="precord">{{ $player->wins }}勝 {{ $player->losses }}敗</span>
-        </div>
+        <p class="player-info">{{ $player->name }} さん</p>
 
         <div class="cards">
             @foreach ($characters as $key => $c)
+            @php $s = $stats[$key]; @endphp
             <form method="POST" action="/character" class="card {{ $player->character === $key ? 'selected' : '' }}">
                 @csrf
                 <input type="hidden" name="character" value="{{ $key }}">
+
                 <div class="cname">{{ $c['name'] }}</div>
-                <div class="cdesc">{{ $c['desc'] }}</div>
-                <div class="cstat">
-                    HP {{ (int) round($c['base_hp'] + $c['hp_growth'] * ($player->level - 1)) }}
-                    ／ 攻撃 {{ (int) round($c['base_power'] + $c['power_growth'] * ($player->level - 1)) }}
+                <div class="clevel">Lv.{{ $s->level }}</div>
+
+                <div class="cexp">
+                    <div class="cexp-fill" style="width: {{ $s->expRatio() }}%"></div>
                 </div>
+                <div class="cexp-text">{{ $s->exp }} / {{ $s->requiredExp() }}</div>
+
+                <div class="cdesc">{{ $c['desc'] }}</div>
+                <div class="cstat">HP {{ $s->maxHp() }} ／ 攻撃 {{ $s->power() }}</div>
+                <div class="crecord">{{ $s->wins }}勝 {{ $s->losses }}敗</div>
+
                 <button type="submit" class="cbtn">
                     {{ $player->character === $key ? '選択中' : 'これにする' }}
                 </button>
