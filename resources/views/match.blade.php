@@ -10,11 +10,11 @@
 <div class="arena">
     <div class="bars">
         <div class="bar-block">
-            <div class="bar-label">{{ $me }}</div>
+            <div class="bar-label">{{ $meName }}（{{ $me['name'] }} Lv.{{ $meLevel }}）</div>
             <div class="bar"><div class="bar-fill me" id="hp-me"></div></div>
         </div>
         <div class="bar-block">
-            <div class="bar-label">{{ $opponent }}</div>
+            <div class="bar-label">{{ $oppName }}（{{ $opp['name'] }} Lv.{{ $oppLevel }}）</div>
             <div class="bar"><div class="bar-fill you" id="hp-you"></div></div>
         </div>
     </div>
@@ -34,7 +34,7 @@
             <div class="overlay-sub" id="overlay-sub"></div>
             <div class="overlay-actions">
                 <button class="start-btn" id="start">スタート</button>
-                <a class="home-btn" id="home" href="/">タイトルへ戻る</a>
+                <a class="home-btn" id="home" href="/character">キャラ選択へ</a>
             </div>
         </div>
     </div>
@@ -55,11 +55,13 @@
     window.addEventListener('DOMContentLoaded', () => {
         const matchId = @json($matchId);
         const words = @json($words);
+        const MY_MAX = @json($me['max_hp']);
+        const MY_POWER = @json($me['power']);
+        const OPP_MAX = @json($opp['max_hp']);
+        const OPP_POWER = @json($opp['power']);
+
         const playerKey = makePlayerKey();
         const token = document.querySelector('meta[name=csrf-token]').content;
-
-        const MAX_HP = 100;
-        const DAMAGE = 10;
 
         const display = document.getElementById('display');
         const roma = document.getElementById('roma');
@@ -72,12 +74,8 @@
         const hpMeEl = document.getElementById('hp-me');
         const hpYouEl = document.getElementById('hp-you');
 
-        let idx = 0;
-        let pos = 0;
-        let myDone = 0;
-        let oppDone = 0;
-        let playing = false;
-        let finished = false;
+        let idx = 0, pos = 0, myDone = 0, oppDone = 0;
+        let playing = false, finished = false;
 
         homeBtn.style.display = 'none';
 
@@ -95,25 +93,28 @@
         }
 
         function updateHp() {
-            const hpMe = Math.max(0, MAX_HP - oppDone * DAMAGE);
-            const hpYou = Math.max(0, MAX_HP - myDone * DAMAGE);
-            hpMeEl.style.width = hpMe + '%';
-            hpYouEl.style.width = hpYou + '%';
-            return { hpMe, hpYou };
+            const hpMe = Math.max(0, MY_MAX - oppDone * OPP_POWER);
+            const hpOpp = Math.max(0, OPP_MAX - myDone * MY_POWER);
+            hpMeEl.style.width = (hpMe / MY_MAX * 100) + '%';
+            hpYouEl.style.width = (hpOpp / OPP_MAX * 100) + '%';
+            return { hpMe, hpOpp };
         }
 
-        async function reportFinish() {
+        async function loadResult(tries = 0) {
             try {
-                const res = await fetch(`/match/${matchId}/finish`, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': token },
-                });
-                const data = await res.json();
-                if (data.winner) {
-                    overlaySub.textContent = data.winner + ' の勝利';
+                const res = await fetch(`/match/${matchId}/result`);
+                const d = await res.json();
+
+                if (!d.ready) {
+                    if (tries < 5) setTimeout(() => loadResult(tries + 1), 600);
+                    return;
                 }
+
+                overlayText.textContent = d.won ? '勝ち' : '負け';
+                overlaySub.textContent =
+                    `${d.character} EXP +${d.gain}　（Lv.${d.level}　${d.exp}/${d.required}）`;
             } catch (e) {
-                overlaySub.textContent = '結果の記録に失敗しました';
+                overlaySub.textContent = '結果の取得に失敗しました';
             }
         }
 
@@ -122,18 +123,30 @@
             playing = false;
             overlay.style.display = 'flex';
             overlayText.textContent = iWon ? '勝ち' : '負け';
+            overlaySub.textContent = '結果を集計中...';
             startBtn.style.display = 'none';
             homeBtn.style.display = 'inline-block';
         }
 
+        async function reportFinish() {
+            try {
+                await fetch(`/match/${matchId}/finish`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token },
+                });
+            } finally {
+                loadResult();
+            }
+        }
+
         function checkFinish() {
             if (finished) return;
-            const { hpMe, hpYou } = updateHp();
-            if (hpYou > 0 && hpMe > 0) return;
+            const { hpMe, hpOpp } = updateHp();
+            if (hpMe > 0 && hpOpp > 0) return;
 
-            const iWon = hpYou <= 0;
+            const iWon = hpOpp <= 0;
             showResult(iWon);
-            if (iWon) reportFinish();
+            iWon ? reportFinish() : loadResult();
         }
 
         function sendProgress() {
@@ -179,7 +192,7 @@
             if (e.key === w.r[pos]) {
                 pos++;
                 if (pos >= w.r.length) {
-                    idx++;
+                    idx = (idx + 1) % words.length;
                     pos = 0;
                     myDone++;
                     sendProgress();
@@ -224,9 +237,9 @@
                 oppDone = e.wordIndex;
                 checkFinish();
             })
-            .listen('.match.finished', (e) => {
+            .listen('.match.finished', () => {
                 if (!finished) showResult(false);
-                overlaySub.textContent = e.winner + ' の勝利';
+                loadResult();
             });
     });
 </script>

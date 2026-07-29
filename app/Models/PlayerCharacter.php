@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Stats;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -23,21 +24,17 @@ class PlayerCharacter extends Model
 
     public function name(): string
     {
-        return $this->config()['name'];
+        return Stats::of($this->character, $this->level)['name'];
     }
 
     public function maxHp(): int
     {
-        $c = $this->config();
-
-        return (int) round($c['base_hp'] + $c['hp_growth'] * ($this->level - 1));
+        return Stats::of($this->character, $this->level)['max_hp'];
     }
 
     public function power(): int
     {
-        $c = $this->config();
-
-        return (int) round($c['base_power'] + $c['power_growth'] * ($this->level - 1));
+        return Stats::of($this->character, $this->level)['power'];
     }
 
     public function requiredExp(): int
