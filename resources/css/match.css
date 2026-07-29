@@ -240,3 +240,73 @@ body {
 
 .bar-block.boss .bar-label { font-size: 16px; font-weight: bold; color: var(--c); }
 .bar-block.boss .bar { height: 28px; border-radius: 14px; }
+
+.fx-pop {
+    position: absolute;
+    transform: translate(-50%, 0);
+    font-size: 24px;
+    font-weight: bold;
+    pointer-events: none;
+    animation: fxRise .9s ease-out forwards;
+    text-shadow: 0 2px 6px rgba(0,0,0,.6);
+}
+
+.fx-dmg { color: #ffd166; }
+.fx-crit { color: #ff8a3d; font-size: 32px; }
+.fx-heal { color: #7fd18a; }
+.fx-take { color: #e0555a; }
+.fx-guard { color: #6cc7f0; }
+
+@keyframes fxRise {
+    0%   { opacity: 0; transform: translate(-50%, 6px) scale(.7); }
+    18%  { opacity: 1; transform: translate(-50%, -6px) scale(1.12); }
+    32%  { transform: translate(-50%, -10px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+}
+
+.fx-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    animation: fxFade .3s ease-out forwards;
+}
+
+.fx-flash-red { background: rgba(224, 85, 90, .30); }
+.fx-flash-white { background: rgba(255, 255, 255, .22); }
+.fx-flash-blue { background: rgba(108, 199, 240, .25); }
+
+@keyframes fxFade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.fx-shake { animation: fxShake .26s ease-in-out; }
+.fx-shake-strong { animation: fxShakeStrong .5s ease-in-out; }
+
+@keyframes fxShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+@keyframes fxShakeStrong {
+    0%, 100% { transform: translate(0, 0); }
+    15% { transform: translate(-12px, 4px); }
+    35% { transform: translate(10px, -5px); }
+    55% { transform: translate(-8px, -3px); }
+    75% { transform: translate(6px, 3px); }
+}
+
+.sound-btn {
+    margin-left: 12px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #8b8ba7;
+    background: none;
+    border: 1px solid #3a3a5c;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.sound-btn:hover { color: #fff; border-color: #8b8ba7; }
+.sound-btn.off { opacity: .45; }

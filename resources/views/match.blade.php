@@ -119,6 +119,9 @@
                     comboEl.textContent = info.combo >= 2 ? `${info.combo} COMBO` : '';
                     dmgEl.textContent = `${dmg} ダメージ`;
 
+                    window.FX.SFX.word();
+                    window.FX.popup(hpYouEl, `-${dmg}`, dmg >= MY_POWER * 1.6 ? 'crit' : 'dmg');
+
                     sendProgress(info.combo);
                     checkFinish();
                 },
@@ -235,6 +238,7 @@
 
             startBtn.addEventListener('click', async () => {
                 startBtn.blur();
+                window.FX.initAudio();
                 startBtn.disabled = true;
                 try {
                     await fetch(`/match/${matchId}/start`, {
@@ -267,6 +271,8 @@
                 .listen('.match.started', (e) => beginAt(e.startAt))
                 .listen('.player.progressed', (e) => {
                     oppDamage = e.damage;
+                    window.FX.SFX.hit();
+                    window.FX.flash('red');
                     checkFinish();
                 })
                 .listen('.match.finished', () => {
