@@ -100,3 +100,21 @@ body {
 }
 
 .back-btn:hover { background: #46466e; }
+
+.recent-row.link {
+    color: inherit;
+    text-decoration: none;
+    transition: background .12s;
+}
+
+.recent-row.link:hover { background: #2a2a48; }
+.recent-drop { font-size: 13px; }
+
+.best-line {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    opacity: .6;
+    margin: 10px 0 0;
+    font-family: monospace;
+}

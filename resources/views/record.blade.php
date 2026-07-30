@@ -26,6 +26,12 @@
         </div>
     </div>
 
+    <div class="best-line">
+        <span>最高速度 {{ $bestTyping['kps'] }} /秒</span>
+        <span>最高コンボ {{ $bestTyping['combo'] }}</span>
+        <span>最高正確率 {{ $bestTyping['accuracy'] }}%</span>
+    </div>
+
     <h2 class="subtitle">ステージ到達</h2>
     <div class="stage-list">
         @foreach ($rows as $r)
@@ -70,15 +76,26 @@
                     $st = $stages[$run->stage] ?? null;
                     $max = $st ? count($st['enemies']) + (empty($st['boss']) ? 0 : 1) : 0;
                 @endphp
-                <div class="recent-row">
+                @if ($run->finished)
+                    <a class="recent-row link" href="/solo/result/{{ $run->id }}">
+                @else
+                    <div class="recent-row">
+                @endif
                     <span class="recent-date">{{ $run->created_at->format('m/d H:i') }}</span>
                     <span class="recent-stage" style="color: {{ $st['color'] ?? '#888' }}">{{ $st['label'] ?? $run->stage }}</span>
                     <span class="recent-char">{{ $chars[$run->character]['name'] ?? $run->character }}</span>
                     <span class="recent-result {{ $max && $run->cleared >= $max ? 'clear' : '' }}">
                         {{ $run->cleared }} / {{ $max }}
                     </span>
+                    @if ($run->drop_item)
+                        <span class="recent-drop">🎁</span>
+                    @endif
                     <span class="recent-exp">+{{ $run->exp_gained }}</span>
-                </div>
+                @if ($run->finished)
+                    </a>
+                @else
+                    </div>
+                @endif
             @endforeach
         </div>
     @endif

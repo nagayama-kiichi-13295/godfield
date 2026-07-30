@@ -142,3 +142,21 @@ body {
 .btn:hover { background: #46466e; }
 .btn.primary { background: #4CAF50; }
 .btn.primary:hover { background: #45a049; }
+
+.new {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: .1em;
+    color: #1b1b2f;
+    background: #ff8a3d;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: newPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes newPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+}

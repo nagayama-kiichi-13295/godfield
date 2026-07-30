@@ -14,7 +14,10 @@
     <div class="head">
         <span class="head-stage" style="color: {{ $stageConf['color'] }}">{{ $stageConf['label'] }}</span>
         <span class="head-char">{{ $charConf['name'] ?? $run->character }}</span>
-        <span class="head-reach">到達 {{ $run->cleared }} / {{ $run->totalEnemies() }}</span>
+        <span class="head-reach">
+            到達 {{ $run->cleared }} / {{ $run->totalEnemies() }}
+            @if (!empty($records['reach']))<span class="new">自己ベスト</span>@endif
+        </span>
     </div>
 
     <div class="panel">
@@ -82,11 +85,11 @@
             </div>
             <div class="cell">
                 <div class="cell-num">{{ $run->kps() }}<span class="unit">/秒</span></div>
-                <div class="cell-label">打鍵速度</div>
+                <div class="cell-label">打鍵速度 @if (!empty($records['kps']))<span class="new">NEW</span>@endif</div>
             </div>
             <div class="cell">
                 <div class="cell-num">{{ $run->max_combo }}</div>
-                <div class="cell-label">最大コンボ</div>
+                <div class="cell-label">最大コンボ @if (!empty($records['combo']))<span class="new">NEW</span>@endif</div>
             </div>
             <div class="cell">
                 <div class="cell-num">{{ round($run->duration_ms / 1000) }}<span class="unit">秒</span></div>

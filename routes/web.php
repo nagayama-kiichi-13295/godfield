@@ -480,6 +480,22 @@ Route::get('/solo/result/{run}', function (Request $request, int $run) {
 
     $pc = $player->statsFor($r->character);
 
+    $prev = SoloRun::where('player_id', $player->id)
+        ->where('finished', true)
+        ->where('id', '<', $r->id)
+        ->where('typed_chars', '>', 0)
+        ->get();
+
+    $records = [];
+
+    if ($r->typed_chars > 0) {
+        $records = [
+            'kps' => $prev->every(fn ($p) => $r->kps() > $p->kps()),
+            'combo' => $prev->every(fn ($p) => $r->max_combo > $p->max_combo),
+            'reach' => $prev->where('stage', $r->stage)->every(fn ($p) => $r->cleared > $p->cleared),
+        ];
+    }
+
     return CurrentPlayer::attach(
         response()->view('result', [
             'run' => $r,
@@ -488,6 +504,7 @@ Route::get('/solo/result/{run}', function (Request $request, int $run) {
             'pc' => $pc,
             'dropName' => $r->drop_item ? config('equipment.items.' . $r->drop_item . '.name') : null,
             'dropColor' => $r->drop_item ? config('equipment.items.' . $r->drop_item . '.color') : null,
+            'records' => $records,
         ]),
         $player
     );
@@ -508,6 +525,21 @@ Route::get('/record', function (Request $request) {
         ->groupBy('stage')
         ->get()
         ->keyBy('stage');
+
+    $bestTyping = $player->runs()
+        ->where('finished', true)
+        ->where('typed_chars', '>', 0)
+        ->get()
+        ->reduce(function ($carry, $r) {
+            $kps = $r->kps();
+            $acc = $r->accuracy();
+
+            return [
+                'kps' => max($carry['kps'] ?? 0, $kps),
+                'combo' => max($carry['combo'] ?? 0, $r->max_combo),
+                'accuracy' => max($carry['accuracy'] ?? 0, $acc),
+            ];
+        }, ['kps' => 0, 'combo' => 0, 'accuracy' => 0]);
 
     $rows = [];
 
@@ -551,6 +583,7 @@ Route::get('/record', function (Request $request) {
             'recent' => $player->runs()->latest('id')->take(10)->get(),
             'stages' => $stages,
             'chars' => $chars,
+            'bestTyping' => $bestTyping,
         ]),
         $player
     );
