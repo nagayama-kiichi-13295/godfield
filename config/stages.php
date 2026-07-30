@@ -4,6 +4,7 @@ return [
     'training' => [
         'label' => '訓練場',
         'color' => '#7a8fa6',
+        'word_sets' => ['short'],
         'clear_bonus' => 60,
         'drops' => ['iron_sword', 'leather_mail', 'wood_charm'],
         'heal_between' => 0.15,
@@ -16,6 +17,7 @@ return [
     'road' => [
         'label' => '修練の道',
         'color' => '#c98b3a',
+        'word_sets' => ['short', 'long'],
         'clear_bonus' => 150,
         'drops' => ['flame_blade', 'guard_plate', 'sage_rod'],
         'heal_between' => 0.12,
@@ -31,6 +33,7 @@ return [
     'abyss' => [
         'label' => '深淵',
         'color' => '#c0392b',
+        'word_sets' => ['long', 'phrase'],
         'clear_bonus' => 320,
         'drops' => ['dragon_fang', 'dragon_scale', 'sage_charm', 'ancient_seal'],
         'heal_between' => 0.10,

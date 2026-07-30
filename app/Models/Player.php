@@ -86,4 +86,9 @@ class Player extends Model
             ->map(fn ($m) => ['kana' => $m->kana, 'count' => $m->count])
             ->all();
     }
+
+    public function trainings(): HasMany
+    {
+        return $this->hasMany(TrainingRun::class);
+    }
 }

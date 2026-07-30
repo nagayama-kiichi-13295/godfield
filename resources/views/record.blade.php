@@ -13,8 +13,8 @@
 
     <div class="summary">
         <div class="sum-box">
-            <div class="sum-num">{{ $totalRuns }}</div>
-            <div class="sum-label">挑戦回数</div>
+            <div class="sum-num">{{ $totalRuns + $trainCount }}</div>
+            <div class="sum-label">総プレイ回数</div>
         </div>
         <div class="sum-box">
             <div class="sum-num">{{ number_format($totalExp) }}</div>
@@ -23,6 +23,10 @@
         <div class="sum-box">
             <div class="sum-num">{{ collect($charStats)->sum('level') }}</div>
             <div class="sum-label">合計レベル</div>
+        </div>
+        <div class="sum-box">
+            <div class="sum-num">{{ $playMinutes }}<span class="unit">分</span></div>
+            <div class="sum-label">総プレイ時間</div>
         </div>
     </div>
 
@@ -51,6 +55,58 @@
         @endforeach
     </div>
 
+    <h2 class="subtitle">弱点特訓</h2>
+    @if ($trainCount === 0)
+        <p class="empty">まだ特訓の記録がありません</p>
+    @else
+        <div class="train-sum">
+            <div class="ts-box">
+                <div class="ts-num">{{ $trainCount }}</div>
+                <div class="ts-label">特訓回数</div>
+            </div>
+            <div class="ts-box">
+                <div class="ts-num">{{ number_format($trainWords) }}</div>
+                <div class="ts-label">打った単語</div>
+            </div>
+            <div class="ts-box">
+                <div class="ts-num">{{ number_format($trainWeakWords) }}</div>
+                <div class="ts-label">うち弱点</div>
+            </div>
+        </div>
+
+        @if (count($trend) >= 2)
+            @php
+                $accs = array_column($trend, 'accuracy');
+                $minA = min($accs);
+                $maxA = max($accs);
+                $span = max(1, $maxA - $minA);
+                $first = $accs[0];
+                $last = end($accs);
+                $diff = round($last - $first, 1);
+            @endphp
+            <div class="trend">
+                <div class="trend-head">
+                    <span class="trend-title">正確率の推移（直近 {{ count($trend) }} 回）</span>
+                    <span class="trend-diff {{ $diff >= 0 ? 'up' : 'down' }}">
+                        {{ $diff >= 0 ? '+' : '' }}{{ $diff }}%
+                    </span>
+                </div>
+                <div class="chart">
+                    @foreach ($trend as $t)
+                        <div class="col" title="{{ $t['date'] }}　{{ $t['accuracy'] }}%　{{ $t['kps'] }}/秒">
+                            <div class="col-bar" style="height: {{ 14 + ($t['accuracy'] - $minA) / $span * 74 }}%"></div>
+                            <div class="col-val">{{ round($t['accuracy']) }}</div>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="trend-foot">
+                    <span>{{ $minA }}%</span>
+                    <span>{{ $maxA }}%</span>
+                </div>
+            </div>
+        @endif
+    @endif
+
     @if (!empty($weak))
         <h2 class="subtitle">苦手な文字</h2>
         <div class="weak-list">
@@ -62,6 +118,7 @@
                 </div>
             @endforeach
         </div>
+        <p class="weak-note">この文字を含む単語が弱点特訓で優先的に出題されます</p>
     @endif
 
     <h2 class="subtitle">キャラクター</h2>
@@ -79,7 +136,7 @@
         @endforeach
     </div>
 
-    <h2 class="subtitle">最近の挑戦</h2>
+    <h2 class="subtitle">最近の連戦</h2>
     @if ($recent->isEmpty())
         <p class="empty">まだ記録がありません</p>
     @else
@@ -109,6 +166,21 @@
                 @else
                     </div>
                 @endif
+            @endforeach
+        </div>
+    @endif
+
+    @if ($trainRecent->isNotEmpty())
+        <h2 class="subtitle">最近の特訓</h2>
+        <div class="recent-list">
+            @foreach ($trainRecent as $t)
+                <a class="recent-row link" href="/training/result/{{ $t->id }}">
+                    <span class="recent-date">{{ $t->created_at->format('m/d H:i') }}</span>
+                    <span class="recent-stage" style="color: #e08a3d">弱点特訓</span>
+                    <span class="recent-char">{{ $t->words }} 語（弱点 {{ $t->weak_words }}）</span>
+                    <span class="recent-result {{ $t->accuracy() >= 95 ? 'clear' : '' }}">{{ $t->accuracy() }}%</span>
+                    <span class="recent-exp">+{{ $t->exp_gained }}</span>
+                </a>
             @endforeach
         </div>
     @endif

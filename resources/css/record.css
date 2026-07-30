@@ -135,3 +135,74 @@ body {
 .weak-kana { font-size: 20px; color: #ff9a9e; }
 .weak-roma { font-size: 11px; font-family: monospace; opacity: .55; margin-top: 2px; }
 .weak-count { font-size: 11px; opacity: .5; margin-top: 4px; }
+
+.summary { flex-wrap: wrap; }
+.sum-box { min-width: 120px; }
+.sum-num .unit { font-size: 13px; opacity: .6; margin-left: 2px; }
+
+.train-sum { display: flex; gap: 12px; margin-bottom: 16px; }
+
+.ts-box {
+    flex: 1;
+    background: #24243e;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+}
+
+.ts-num { font-size: 20px; font-family: monospace; color: #e08a3d; }
+.ts-label { font-size: 11px; opacity: .55; margin-top: 2px; }
+
+.trend {
+    background: #24243e;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.trend-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+}
+
+.trend-title { font-size: 13px; opacity: .65; }
+.trend-diff { font-size: 16px; font-weight: bold; font-family: monospace; }
+.trend-diff.up { color: #7fd18a; }
+.trend-diff.down { color: #e0555a; }
+
+.chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    height: 110px;
+}
+
+.col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+}
+
+.col-bar {
+    width: 100%;
+    background: linear-gradient(180deg, #e08a3d, #b56a25);
+    border-radius: 3px 3px 0 0;
+    transition: height .3s;
+}
+
+.col-val { font-size: 9px; opacity: .5; margin-top: 3px; font-family: monospace; }
+
+.trend-foot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    opacity: .4;
+    margin-top: 6px;
+    font-family: monospace;
+}
+
+.weak-note { font-size: 12px; opacity: .5; margin-top: 10px; }

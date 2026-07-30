@@ -4,27 +4,38 @@ namespace App\Support;
 
 class WordList
 {
-    private const WORDS = [
-        ['猫', 'ねこ'], ['犬', 'いぬ'], ['鳥', 'とり'], ['魚', 'さかな'],
-        ['車', 'くるま'], ['電車', 'でんしゃ'], ['飛行機', 'ひこうき'],
-        ['自転車', 'じてんしゃ'], ['山', 'やま'], ['海', 'うみ'],
-        ['川', 'かわ'], ['空', 'そら'], ['星', 'ほし'], ['月', 'つき'],
-        ['太陽', 'たいよう'], ['森', 'もり'], ['花', 'はな'], ['草', 'くさ'],
-        ['林檎', 'りんご'], ['蜜柑', 'みかん'], ['葡萄', 'ぶどう'],
-        ['御飯', 'ごはん'], ['寿司', 'すし'], ['天婦羅', 'てんぷら'],
-        ['お茶', 'おちゃ'], ['水', 'みず'], ['机', 'つくえ'], ['窓', 'まど'],
-        ['扉', 'とびら'], ['鍵', 'かぎ'], ['時計', 'とけい'], ['電話', 'でんわ'],
-        ['手紙', 'てがみ'], ['新聞', 'しんぶん'], ['鞄', 'かばん'],
-        ['靴', 'くつ'], ['帽子', 'ぼうし'], ['眼鏡', 'めがね'],
-        ['学校', 'がっこう'], ['切符', 'きっぷ'], ['雑誌', 'ざっし'],
-        ['写真', 'しゃしん'], ['旅行', 'りょこう'], ['宿題', 'しゅくだい'],
-        ['約束', 'やくそく'], ['記念日', 'きねんび'], ['出発', 'しゅっぱつ'],
-        ['牛乳', 'ぎゅうにゅう'],
-    ];
-
-    public static function forMatch(string $matchId, int $count = 40): array
+    public static function pool(?array $sets = null): array
     {
-        $words = self::WORDS;
+        $conf = config('words.sets', []);
+        $keys = $sets ?: array_keys($conf);
+
+        $out = [];
+
+        foreach ($keys as $k) {
+            foreach ($conf[$k] ?? [] as $w) {
+                $out[] = $w;
+            }
+        }
+
+        return $out;
+    }
+
+    private static function format(array $words): array
+    {
+        return array_map(fn ($w) => ['d' => $w[0], 'k' => $w[1]], $words);
+    }
+
+    public static function random(int $count = 60, ?array $sets = null): array
+    {
+        $words = self::pool($sets);
+        shuffle($words);
+
+        return self::format(array_slice($words, 0, $count));
+    }
+
+    public static function forMatch(string $matchId, int $count = 60, ?array $sets = null): array
+    {
+        $words = self::pool($sets);
         $seed = crc32($matchId);
 
         for ($i = count($words) - 1; $i > 0; $i--) {
@@ -33,18 +44,15 @@ class WordList
             [$words[$i], $words[$j]] = [$words[$j], $words[$i]];
         }
 
-        return array_map(
-            fn ($w) => ['d' => $w[0], 'k' => $w[1]],
-            array_slice($words, 0, min($count, count($words)))
-        );
+        return self::format(array_slice($words, 0, $count));
     }
 
-    public static function forKana(array $kanaList, int $count = 30): array
+    public static function forKana(array $kanaList, int $count = 30, ?array $sets = null): array
     {
         $matched = [];
         $rest = [];
 
-        foreach (self::WORDS as $w) {
+        foreach (self::pool($sets) as $w) {
             $hit = false;
 
             foreach ($kanaList as $k) {
@@ -62,10 +70,6 @@ class WordList
 
         $picked = array_slice(array_merge($matched, $rest), 0, $count);
 
-        if (empty($picked)) {
-            $picked = array_slice(self::WORDS, 0, $count);
-        }
-
-        return array_map(fn ($w) => ['d' => $w[0], 'k' => $w[1]], $picked);
+        return self::format($picked ?: array_slice(self::pool($sets), 0, $count));
     }
 }

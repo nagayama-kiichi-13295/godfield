@@ -140,6 +140,7 @@
 
             const typing = window.Typing.create({
                 words,
+                altWords: defenseWords,
                 displayEl: $('display'),
                 readingEl: $('reading'),
                 romaEl: roma,
@@ -266,7 +267,7 @@
                 window.FX.SFX.charge();
                 window.FX.flash('red');
                 telegraphText.textContent = `${boss.name} が力を溜めている！ 防御 0 / ${defNeed}`;
-                typing.setWords(defenseWords);
+                typing.useAlt();
 
                 const tick = () => {
                     if (!running || !charging) return;
@@ -285,7 +286,7 @@
                 charging = false;
                 cancelAnimationFrame(chargeRaf);
                 telegraph.classList.remove('on');
-                typing.setWords(words);
+                typing.useMain();
 
                 if (defended) {
                     healEl.textContent = '防御成功！';
@@ -336,7 +337,7 @@
                 updateHp();
                 if (i === 0) funStart = Date.now();
                 running = true;
-                typing.setWords(words);
+                typing.useMain();
                 typing.start();
                 scheduleAttack();
                 scheduleCharge();

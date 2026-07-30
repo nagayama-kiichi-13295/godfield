@@ -100,6 +100,7 @@
 
             const typing = window.Typing.create({
                 words,
+                shuffle: false,
                 displayEl: document.getElementById('display'),
                 readingEl: document.getElementById('reading'),
                 romaEl: roma,

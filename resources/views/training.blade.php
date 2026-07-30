@@ -91,10 +91,9 @@ window.addEventListener('DOMContentLoaded', () => {
         onWord: (info) => {
             if (!running) return;
 
-            const justDone = words[(info.count - 1) % words.length];
-
             doneWords += 1;
-            if (justDone && isWeakWord(justDone.k)) {
+
+            if (info.word && isWeakWord(info.word.k)) {
                 weakWords += 1;
                 window.FX.popup(roma, '弱点 +1', 'heal');
             }

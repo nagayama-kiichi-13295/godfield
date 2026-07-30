@@ -240,7 +240,7 @@ Route::get('/match/{matchId}', function (Request $request, string $matchId) {
     return CurrentPlayer::attach(
         response()->view('match', [
             'matchId' => $matchId,
-            'words' => WordList::forMatch($matchId),
+            'words' => WordList::forMatch($matchId, 60, ['short', 'long']),
             'meName' => $isP1 ? $match->player1 : $match->player2,
             'oppName' => $isP1 ? $match->player2 : $match->player1,
             'meLevel' => $isP1 ? $match->player1_level : $match->player2_level,
@@ -370,9 +370,9 @@ Route::get('/solo/{stage?}', function (Request $request, string $stage = 'traini
             'stage' => $stage,
             'stageConf' => $conf,
             'runId' => $run->id,
-            'words' => WordList::forMatch('solo-' . Str::random(8)),
+            'words' => WordList::random(60, $conf['word_sets'] ?? null),
+            'defenseWords' => WordList::random(20, ['short']),
             'boss' => empty($conf['boss']) ? null : config('bosses.' . $conf['boss']),
-            'defenseWords' => WordList::forMatch('def-' . Str::random(8), 20),
         ]),
         $player
     );
@@ -535,21 +535,6 @@ Route::get('/record', function (Request $request) {
         ->get()
         ->keyBy('stage');
 
-    $bestTyping = $player->runs()
-        ->where('finished', true)
-        ->where('typed_chars', '>', 0)
-        ->get()
-        ->reduce(function ($carry, $r) {
-            $kps = $r->kps();
-            $acc = $r->accuracy();
-
-            return [
-                'kps' => max($carry['kps'] ?? 0, $kps),
-                'combo' => max($carry['combo'] ?? 0, $r->max_combo),
-                'accuracy' => max($carry['accuracy'] ?? 0, $acc),
-            ];
-        }, ['kps' => 0, 'combo' => 0, 'accuracy' => 0]);
-
     $rows = [];
 
     foreach ($stages as $key => $st) {
@@ -582,18 +567,42 @@ Route::get('/record', function (Request $request) {
         ];
     }
 
+    $soloRuns = $player->runs()->where('finished', true)->where('typed_chars', '>', 0)->get();
+    $trainRuns = $player->trainings()->where('finished', true)->get();
+    $allRuns = $soloRuns->concat($trainRuns);
+
+    $bestTyping = [
+        'kps' => round((float) $allRuns->max(fn ($r) => $r->kps()), 2),
+        'combo' => (int) $allRuns->max('max_combo'),
+        'accuracy' => round((float) $allRuns->max(fn ($r) => $r->accuracy()), 1),
+    ];
+
+    $trend = $trainRuns->sortBy('id')->take(-12)->values()->map(fn ($r) => [
+        'accuracy' => $r->accuracy(),
+        'kps' => $r->kps(),
+        'date' => $r->created_at->format('m/d'),
+    ])->all();
+
+    $playMs = (int) ($soloRuns->sum('duration_ms') + $trainRuns->sum('duration_ms'));
+
     return CurrentPlayer::attach(
         response()->view('record', [
             'player' => $player,
             'rows' => $rows,
             'charStats' => $charStats,
             'totalRuns' => $player->runs()->count(),
-            'totalExp' => (int) $player->runs()->sum('exp_gained'),
-            'recent' => $player->runs()->latest('id')->take(10)->get(),
+            'totalExp' => (int) ($player->runs()->sum('exp_gained') + $trainRuns->sum('exp_gained')),
+            'recent' => $player->runs()->latest('id')->take(8)->get(),
+            'trainRecent' => $player->trainings()->where('finished', true)->latest('id')->take(8)->get(),
+            'trainCount' => $trainRuns->count(),
+            'trainWords' => (int) $trainRuns->sum('words'),
+            'trainWeakWords' => (int) $trainRuns->sum('weak_words'),
+            'trend' => $trend,
+            'playMinutes' => (int) round($playMs / 60000),
+            'weak' => $player->weakKana(6),
+            'bestTyping' => $bestTyping,
             'stages' => $stages,
             'chars' => $chars,
-            'bestTyping' => $bestTyping,
-            'weak' => $player->weakKana(6),
         ]),
         $player
     );
@@ -610,7 +619,7 @@ Route::get('/training', function (Request $request) {
     $pc = $player->currentStats();
 
     $weak = collect($player->weakKana($conf['target_kana']))->pluck('kana')->all();
-    $words = WordList::forKana($weak, $conf['word_count']);
+    $words = WordList::forKana($weak, $conf['word_count'], $conf['word_sets'] ?? null);
 
     $run = TrainingRun::create([
         'player_id' => $player->id,

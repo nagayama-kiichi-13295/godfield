@@ -10,4 +10,5 @@ return [
     'accuracy_bonus' => 80,
     'accuracy_line' => 95.0,
     'time_limit' => 90,
+    'word_sets' => ['short', 'long'],
 ];
