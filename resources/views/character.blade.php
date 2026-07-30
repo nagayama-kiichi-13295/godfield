@@ -103,6 +103,13 @@
         @endforeach
     </div>
 
+    <h2 class="subtitle">弱点特訓</h2>
+    <div class="modes">
+        <a class="mode-btn" href="/training" style="--c: #e08a3d">
+            苦手な文字を練習<span class="mode-sub">90 秒</span>
+        </a>
+    </div>
+
     <h2 class="subtitle">連戦に挑む</h2>
     <div class="modes">
         @foreach ($stages as $stageKey => $stage)

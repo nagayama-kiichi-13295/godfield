@@ -7,6 +7,7 @@ use App\Events\PlayerProgressed;
 use App\Models\GameMatch;
 use App\Models\Player;
 use App\Models\SoloRun;
+use App\Models\TrainingRun;
 use App\Support\CurrentPlayer;
 use App\Support\Stats;
 use App\Support\WordList;
@@ -593,6 +594,122 @@ Route::get('/record', function (Request $request) {
             'chars' => $chars,
             'bestTyping' => $bestTyping,
             'weak' => $player->weakKana(6),
+        ]),
+        $player
+    );
+});
+
+Route::get('/training', function (Request $request) {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (! $player->name) {
+        return CurrentPlayer::attach(redirect('/player'), $player);
+    }
+
+    $conf = config('training');
+    $pc = $player->currentStats();
+
+    $weak = collect($player->weakKana($conf['target_kana']))->pluck('kana')->all();
+    $words = WordList::forKana($weak, $conf['word_count']);
+
+    $run = TrainingRun::create([
+        'player_id' => $player->id,
+        'character' => $pc->character,
+        'target_kana' => $weak,
+        'level_before' => $pc->level,
+    ]);
+
+    return CurrentPlayer::attach(
+        response()->view('training', [
+            'player' => $player,
+            'conf' => $conf,
+            'me' => $pc->stats(),
+            'level' => $pc->level,
+            'weak' => $weak,
+            'words' => $words,
+            'runId' => $run->id,
+        ]),
+        $player
+    );
+});
+
+Route::post('/training/finish', function (Request $request) {
+    $data = $request->validate([
+        'run_id' => ['required', 'integer'],
+        'words' => ['required', 'integer', 'min:0', 'max:9999'],
+        'weak_words' => ['required', 'integer', 'min:0', 'max:9999'],
+        'typed_chars' => ['required', 'integer', 'min:0', 'max:999999'],
+        'miss_count' => ['required', 'integer', 'min:0', 'max:999999'],
+        'max_combo' => ['required', 'integer', 'min:0', 'max:99999'],
+        'duration_ms' => ['required', 'integer', 'min:0', 'max:99999999'],
+        'miss_map' => ['nullable', 'array'],
+    ]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $run = TrainingRun::where('id', $data['run_id'])->where('player_id', $player->id)->first();
+
+    if (! $run) {
+        return response()->json(['ok' => false], 404);
+    }
+
+    if ($run->finished) {
+        return response()->json(['ok' => true, 'redirect' => "/training/result/{$run->id}"]);
+    }
+
+    $conf = config('training');
+    $stats = $player->statsFor($run->character);
+
+    $normal = max(0, $data['words'] - $data['weak_words']);
+    $accuracy = $data['typed_chars'] + $data['miss_count'] > 0
+        ? $data['typed_chars'] / ($data['typed_chars'] + $data['miss_count']) * 100
+        : 0;
+
+    $gain = $normal * $conf['exp_per_word']
+        + $data['weak_words'] * $conf['exp_per_weak']
+        + ($accuracy >= $conf['accuracy_line'] ? $conf['accuracy_bonus'] : 0);
+
+    $levelBefore = $stats->level;
+    $stats->addExp($gain);
+
+    $run->update([
+        'words' => $data['words'],
+        'weak_words' => $data['weak_words'],
+        'typed_chars' => $data['typed_chars'],
+        'miss_count' => $data['miss_count'],
+        'max_combo' => $data['max_combo'],
+        'duration_ms' => $data['duration_ms'],
+        'miss_map' => $data['miss_map'] ?? null,
+        'exp_gained' => $gain,
+        'level_before' => $levelBefore,
+        'level_after' => $stats->level,
+        'finished' => true,
+    ]);
+
+    if (! empty($data['miss_map'])) {
+        $player->recordMisses($data['miss_map']);
+    }
+
+    return response()->json(['ok' => true, 'redirect' => "/training/result/{$run->id}"]);
+});
+
+Route::get('/training/result/{run}', function (Request $request, int $run) {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $r = TrainingRun::where('id', $run)->where('player_id', $player->id)->first();
+
+    if (! $r || ! $r->finished) {
+        return redirect('/character');
+    }
+
+    $conf = config('training');
+
+    return CurrentPlayer::attach(
+        response()->view('training-result', [
+            'run' => $r,
+            'conf' => $conf,
+            'pc' => $player->statsFor($r->character),
+            'charConf' => config('characters.' . $r->character),
+            'cleared' => $r->accuracy() >= $conf['accuracy_line'],
+            'missTop' => collect($r->miss_map ?? [])->sortDesc()->take(4)->all(),
         ]),
         $player
     );

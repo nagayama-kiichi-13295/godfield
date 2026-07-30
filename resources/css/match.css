@@ -310,3 +310,24 @@ body {
 
 .sound-btn:hover { color: #fff; border-color: #8b8ba7; }
 .sound-btn.off { opacity: .45; }
+
+.target-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 10px 14px;
+    background: #24243e;
+    border-radius: 8px;
+}
+
+.target-label { font-size: 12px; opacity: .6; }
+
+.target-kana {
+    font-size: 15px;
+    color: #ff9a9e;
+    padding: 2px 8px;
+    background: #1b1b2f;
+    border-radius: 5px;
+}

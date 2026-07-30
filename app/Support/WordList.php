@@ -38,4 +38,34 @@ class WordList
             array_slice($words, 0, min($count, count($words)))
         );
     }
+
+    public static function forKana(array $kanaList, int $count = 30): array
+    {
+        $matched = [];
+        $rest = [];
+
+        foreach (self::WORDS as $w) {
+            $hit = false;
+
+            foreach ($kanaList as $k) {
+                if ($k !== '' && mb_strpos($w[1], $k) !== false) {
+                    $hit = true;
+                    break;
+                }
+            }
+
+            $hit ? $matched[] = $w : $rest[] = $w;
+        }
+
+        shuffle($matched);
+        shuffle($rest);
+
+        $picked = array_slice(array_merge($matched, $rest), 0, $count);
+
+        if (empty($picked)) {
+            $picked = array_slice(self::WORDS, 0, $count);
+        }
+
+        return array_map(fn ($w) => ['d' => $w[0], 'k' => $w[1]], $picked);
+    }
 }
