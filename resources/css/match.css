@@ -23,17 +23,21 @@ body {
     flex: 1;
 }
 
-.bar-label {
-    font-size: 14px;
+.bar-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 6px;
-    opacity: .8;
 }
+
+.bar-label { font-size: 14px; opacity: .85; }
 
 .bar {
     height: 22px;
     background: #12121f;
     border-radius: 11px;
     overflow: hidden;
+    border: 1px solid var(--c, transparent);
 }
 
 .bar-fill {
@@ -150,4 +154,180 @@ body {
 
 .home-btn:hover {
     background: #46466e;
+}
+
+.reading {
+    font-size: 20px;
+    color: #a0a0c0;
+    letter-spacing: .15em;
+    margin-bottom: 18px;
+}
+
+.meter {
+    margin-top: 26px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    min-height: 28px;
+}
+
+.combo {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffd166;
+}
+
+.dmg {
+    font-size: 15px;
+    color: #e0a0a0;
+}
+
+.run-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+}
+
+.run-stage { font-weight: bold; }
+.run-progress { opacity: .7; }
+.run-timer { margin-left: auto; font-family: monospace; font-size: 20px; color: #ffd166; }
+
+.hp-num { margin-left: auto; font-size: 12px; opacity: .6; font-family: monospace; }
+
+.bar-fill.hit { filter: brightness(2.2); }
+
+.heal { font-size: 15px; color: #7fd18a; }
+
+.telegraph {
+    display: none;
+    margin: 18px 0 -10px;
+    padding: 12px 16px;
+    background: rgba(224, 85, 90, .12);
+    border: 1px solid #e0555a;
+    border-radius: 10px;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.telegraph.on { display: block; }
+
+.telegraph-text {
+    font-size: 15px;
+    color: #ff9a9e;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.telegraph-bar {
+    height: 8px;
+    background: #12121f;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.telegraph-fill {
+    height: 100%;
+    width: 100%;
+    background: #e0555a;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .65; }
+}
+
+.bar-block.boss .bar-label { font-size: 16px; font-weight: bold; color: var(--c); }
+.bar-block.boss .bar { height: 28px; border-radius: 14px; }
+
+.fx-pop {
+    position: absolute;
+    transform: translate(-50%, 0);
+    font-size: 24px;
+    font-weight: bold;
+    pointer-events: none;
+    animation: fxRise .9s ease-out forwards;
+    text-shadow: 0 2px 6px rgba(0,0,0,.6);
+}
+
+.fx-dmg { color: #ffd166; }
+.fx-crit { color: #ff8a3d; font-size: 32px; }
+.fx-heal { color: #7fd18a; }
+.fx-take { color: #e0555a; }
+.fx-guard { color: #6cc7f0; }
+
+@keyframes fxRise {
+    0%   { opacity: 0; transform: translate(-50%, 6px) scale(.7); }
+    18%  { opacity: 1; transform: translate(-50%, -6px) scale(1.12); }
+    32%  { transform: translate(-50%, -10px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+}
+
+.fx-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    animation: fxFade .3s ease-out forwards;
+}
+
+.fx-flash-red { background: rgba(224, 85, 90, .30); }
+.fx-flash-white { background: rgba(255, 255, 255, .22); }
+.fx-flash-blue { background: rgba(108, 199, 240, .25); }
+
+@keyframes fxFade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.fx-shake { animation: fxShake .26s ease-in-out; }
+.fx-shake-strong { animation: fxShakeStrong .5s ease-in-out; }
+
+@keyframes fxShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+@keyframes fxShakeStrong {
+    0%, 100% { transform: translate(0, 0); }
+    15% { transform: translate(-12px, 4px); }
+    35% { transform: translate(10px, -5px); }
+    55% { transform: translate(-8px, -3px); }
+    75% { transform: translate(6px, 3px); }
+}
+
+.sound-btn {
+    margin-left: 12px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #8b8ba7;
+    background: none;
+    border: 1px solid #3a3a5c;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.sound-btn:hover { color: #fff; border-color: #8b8ba7; }
+.sound-btn.off { opacity: .45; }
+
+.target-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 10px 14px;
+    background: #24243e;
+    border-radius: 8px;
+}
+
+.target-label { font-size: 12px; opacity: .6; }
+
+.target-kana {
+    font-size: 15px;
+    color: #ff9a9e;
+    padding: 2px 8px;
+    background: #1b1b2f;
+    border-radius: 5px;
 }

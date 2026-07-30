@@ -11,15 +11,13 @@ export default defineConfig({
                 'resources/css/player.css',
                 'resources/css/matching.css',
                 'resources/css/match.css',
-                'resources/js/app.js'
+                'resources/css/character.css',
+                'resources/css/record.css',
+                'resources/css/result.css',
+                'resources/js/app.js',
             ],
             refresh: true,
         }),
         tailwindcss(),
     ],
-    server: {
-        watch: {
-            ignored: ['**/storage/framework/views/**'],
-        },
-    },
 });
