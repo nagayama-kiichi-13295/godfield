@@ -265,9 +265,11 @@ Route::post('/match/{matchId}/start', function (string $matchId) {
 Route::post('/match/{matchId}/progress', function (Request $request, string $matchId) {
     $data = $request->validate([
         'player_key' => ['required', 'string', 'max:64'],
-        'word_index' => ['required', 'integer', 'min:0', 'max:999'],
+        'word_index' => ['required', 'integer', 'min:0', 'max:9999'],
         'damage' => ['required', 'integer', 'min:0', 'max:99999'],
-        'combo' => ['required', 'integer', 'min:0', 'max:999'],
+        'combo' => ['required', 'integer', 'min:0', 'max:9999'],
+        'hp' => ['required', 'integer', 'min:0', 'max:99999'],
+        'healed' => ['required', 'integer', 'min:0', 'max:99999'],
     ]);
 
     broadcast(new PlayerProgressed(
@@ -276,6 +278,8 @@ Route::post('/match/{matchId}/progress', function (Request $request, string $mat
         $data['word_index'],
         $data['damage'],
         $data['combo'],
+        $data['hp'],
+        $data['healed'],
     ))->toOthers();
 
     return response()->noContent();
