@@ -51,6 +51,19 @@
         @endforeach
     </div>
 
+    @if (!empty($weak))
+        <h2 class="subtitle">苦手な文字</h2>
+        <div class="weak-list">
+            @foreach ($weak as $w)
+                <div class="weak-item">
+                    <span class="weak-kana">{{ $w['kana'] }}</span>
+                    <span class="weak-roma">{{ \App\Support\Romaji::of($w['kana']) }}</span>
+                    <span class="weak-count">{{ $w['count'] }} 回</span>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
     <h2 class="subtitle">キャラクター</h2>
     <div class="char-list">
         @foreach ($charStats as $cs)

@@ -56,4 +56,34 @@ class Player extends Model
 
         return $key;
     }
+
+    public function missStats(): HasMany
+    {
+        return $this->hasMany(MissStat::class);
+    }
+
+    public function recordMisses(array $map): void
+    {
+        foreach ($map as $kana => $count) {
+            $kana = mb_substr((string) $kana, 0, 4);
+            $count = (int) $count;
+
+            if ($kana === '' || $count < 1 || $count > 9999) {
+                continue;
+            }
+
+            $row = $this->missStats()->firstOrCreate(['kana' => $kana], ['count' => 0]);
+            $row->increment('count', $count);
+        }
+    }
+
+    public function weakKana(int $limit = 5): array
+    {
+        return $this->missStats()
+            ->orderByDesc('count')
+            ->take($limit)
+            ->get()
+            ->map(fn ($m) => ['kana' => $m->kana, 'count' => $m->count])
+            ->all();
+    }
 }

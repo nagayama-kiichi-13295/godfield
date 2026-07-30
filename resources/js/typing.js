@@ -15,6 +15,7 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
     let missedThisWord = false;
     let wordStart = 0;
     let chars = 0;
+    let missMap = {};
 
     function render() {
         const w = list[idx];
@@ -53,10 +54,18 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
         if (!/^[a-z0-9-]$/.test(key)) return;
 
         if (!matcher.input(key)) {
+            const spot = matcher.current();
+
             combo = 0;
             missCount += 1;
             missedThisWord = true;
-            if (onMiss) onMiss({ combo, key });
+
+            if (spot) {
+                const at = spot.kana;
+                missMap[at] = (missMap[at] || 0) + 1;
+            }
+
+            if (onMiss) onMiss({ combo, key, at: spot ? spot.kana : null });
             return;
         }
 
@@ -89,11 +98,11 @@ export function createTyping({ words, displayEl, readingEl, romaEl, onWord, onMi
         stop() { active = false; },
         reset() {
             completed = 0; combo = 0; maxCombo = 0;
-            missCount = 0; typedChars = 0;
+            missCount = 0; typedChars = 0; missMap = {};
             loadWord(0); render();
         },
         setWords(next) { list = next; loadWord(0); render(); },
-        stats() { return { maxCombo, missCount, typedChars }; },
+        stats() { return { maxCombo, missCount, typedChars, missMap }; },
         render,
         destroy() { active = false; document.removeEventListener('keydown', onKey); },
     };

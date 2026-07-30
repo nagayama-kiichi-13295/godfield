@@ -70,6 +70,20 @@
 
     <div class="panel">
         <h2 class="panel-title">タイピング成績</h2>
+        @if (!empty($missTop))
+            <div class="panel">
+                <h2 class="panel-title">つまずいた文字</h2>
+                <div class="weak-list">
+                    @foreach ($missTop as $kana => $count)
+                        <div class="weak-item">
+                            <span class="weak-kana">{{ $kana }}</span>
+                            <span class="weak-roma">{{ \App\Support\Romaji::of($kana) }}</span>
+                            <span class="weak-count">{{ $count }} 回</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
         <div class="grid">
             <div class="cell">
                 <div class="cell-num">{{ number_format($run->typed_chars) }}</div>

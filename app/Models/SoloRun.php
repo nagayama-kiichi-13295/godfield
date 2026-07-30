@@ -22,11 +22,13 @@ class SoloRun extends Model
         'typed_chars',
         'miss_count',
         'duration_ms',
+        'miss_map',
     ];
 
     protected $casts = [
         'finished' => 'boolean',
         'is_cleared' => 'boolean',
+        'miss_map' => 'array',
     ];
 
     public function stageConfig(): array

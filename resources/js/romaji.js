@@ -170,5 +170,11 @@ export function createMatcher(kana) {
 
             return { typed, rest };
         },
+        
+        current() {
+            const chunk = chunks[ci];
+
+            return chunk ? { kana: chunk.kana, buf } : null;
+        },
     };
 }

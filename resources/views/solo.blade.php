@@ -431,6 +431,7 @@
                             max_combo: s.maxCombo,
                             typed_chars: s.typedChars,
                             miss_count: s.missCount,
+                            miss_map: s.missMap,
                             duration_ms: runStart ? Date.now() - runStart : 0,
                         }),
                     });

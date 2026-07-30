@@ -10,6 +10,7 @@ use App\Models\SoloRun;
 use App\Support\CurrentPlayer;
 use App\Support\Stats;
 use App\Support\WordList;
+use App\Support\Romaji;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -422,6 +423,7 @@ Route::post('/solo/finish', function (Request $request) {
         'max_combo' => ['nullable', 'integer', 'min:0', 'max:99999'],
         'typed_chars' => ['nullable', 'integer', 'min:0', 'max:999999'],
         'miss_count' => ['nullable', 'integer', 'min:0', 'max:999999'],
+        'miss_map' => ['nullable', 'array'],
         'duration_ms' => ['nullable', 'integer', 'min:0', 'max:99999999'],
     ]);
 
@@ -464,8 +466,13 @@ Route::post('/solo/finish', function (Request $request) {
         'max_combo' => $data['max_combo'] ?? 0,
         'typed_chars' => $data['typed_chars'] ?? 0,
         'miss_count' => $data['miss_count'] ?? 0,
+        'miss_map' => $data['miss_map'] ?? null,
         'duration_ms' => $data['duration_ms'] ?? 0,
     ]);
+
+    if (! empty($data['miss_map'])) {
+        $player->recordMisses($data['miss_map']);
+    }
 
     return response()->json(['ok' => true, 'redirect' => "/solo/result/{$run->id}"]);
 });
@@ -505,6 +512,7 @@ Route::get('/solo/result/{run}', function (Request $request, int $run) {
             'dropName' => $r->drop_item ? config('equipment.items.' . $r->drop_item . '.name') : null,
             'dropColor' => $r->drop_item ? config('equipment.items.' . $r->drop_item . '.color') : null,
             'records' => $records,
+            'missTop' => collect($r->miss_map ?? [])->sortDesc()->take(4)->all(),
         ]),
         $player
     );
@@ -584,6 +592,7 @@ Route::get('/record', function (Request $request) {
             'stages' => $stages,
             'chars' => $chars,
             'bestTyping' => $bestTyping,
+            'weak' => $player->weakKana(6),
         ]),
         $player
     );
