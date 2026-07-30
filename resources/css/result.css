@@ -177,3 +177,8 @@ body {
 .weak-kana { font-size: 20px; color: #ff9a9e; }
 .weak-roma { font-size: 11px; font-family: monospace; opacity: .55; margin-top: 2px; }
 .weak-count { font-size: 11px; opacity: .5; margin-top: 4px; }
+
+.record-line { display: flex; align-items: baseline; justify-content: space-between; }
+.record-main { font-size: 46px; font-weight: bold; color: #ffd166; font-family: monospace; }
+.record-main .unit { font-size: 18px; margin-left: 3px; opacity: .7; }
+.record-prev { font-size: 13px; opacity: .6; }

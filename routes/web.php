@@ -8,6 +8,8 @@ use App\Models\GameMatch;
 use App\Models\Player;
 use App\Models\SoloRun;
 use App\Models\TrainingRun;
+use App\Models\EndlessRun;
+use App\Support\EndlessGen;
 use App\Support\CurrentPlayer;
 use App\Support\Stats;
 use App\Support\WordList;
@@ -569,7 +571,8 @@ Route::get('/record', function (Request $request) {
 
     $soloRuns = $player->runs()->where('finished', true)->where('typed_chars', '>', 0)->get();
     $trainRuns = $player->trainings()->where('finished', true)->get();
-    $allRuns = $soloRuns->concat($trainRuns);
+    $endlessRuns = $player->endlessRuns()->where('finished', true)->get();
+    $allRuns = $soloRuns->concat($trainRuns)->concat($endlessRuns->filter(fn ($r) => $r->typed_chars > 0));
 
     $bestTyping = [
         'kps' => round((float) $allRuns->max(fn ($r) => $r->kps()), 2),
@@ -583,7 +586,7 @@ Route::get('/record', function (Request $request) {
         'date' => $r->created_at->format('m/d'),
     ])->all();
 
-    $playMs = (int) ($soloRuns->sum('duration_ms') + $trainRuns->sum('duration_ms'));
+    $playMs = (int) ($soloRuns->sum('duration_ms') + $trainRuns->sum('duration_ms') + $endlessRuns->sum('duration_ms'));
 
     return CurrentPlayer::attach(
         response()->view('record', [
@@ -591,7 +594,13 @@ Route::get('/record', function (Request $request) {
             'rows' => $rows,
             'charStats' => $charStats,
             'totalRuns' => $player->runs()->count(),
-            'totalExp' => (int) ($player->runs()->sum('exp_gained') + $trainRuns->sum('exp_gained')),
+            'totalExp' => (int) (
+                $player->runs()->sum('exp_gained')
+                + $trainRuns->sum('exp_gained')
+                + $endlessRuns->sum('exp_gained')
+            ),
+            'endless' => $player->endlessSummary(),
+            'endlessCount' => $endlessRuns->count(),
             'recent' => $player->runs()->latest('id')->take(8)->get(),
             'trainRecent' => $player->trainings()->where('finished', true)->latest('id')->take(8)->get(),
             'trainCount' => $trainRuns->count(),
@@ -718,6 +727,125 @@ Route::get('/training/result/{run}', function (Request $request, int $run) {
             'pc' => $player->statsFor($r->character),
             'charConf' => config('characters.' . $r->character),
             'cleared' => $r->accuracy() >= $conf['accuracy_line'],
+            'missTop' => collect($r->miss_map ?? [])->sortDesc()->take(4)->all(),
+        ]),
+        $player
+    );
+});
+
+Route::get('/endless/{mode}', function (Request $request, string $mode) {
+    $conf = config('endless.' . $mode);
+
+    if (! $conf) {
+        return redirect('/character');
+    }
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+    if (! $player->name) {
+        return CurrentPlayer::attach(redirect('/player'), $player);
+    }
+
+    $pc = $player->currentStats();
+
+    $run = EndlessRun::create([
+        'player_id' => $player->id,
+        'character' => $pc->character,
+        'mode' => $mode,
+        'level_before' => $pc->level,
+    ]);
+
+    return CurrentPlayer::attach(
+        response()->view('endless', [
+            'player' => $player,
+            'mode' => $mode,
+            'conf' => $conf,
+            'me' => $pc->stats(),
+            'level' => $pc->level,
+            'enemies' => EndlessGen::batch($mode, 0, 60),
+            'words' => WordList::random(80, $conf['word_sets'] ?? null),
+            'runId' => $run->id,
+            'best' => $player->endlessBest($mode),
+        ]),
+        $player
+    );
+});
+
+Route::post('/endless/finish', function (Request $request) {
+    $data = $request->validate([
+        'run_id' => ['required', 'integer'],
+        'defeated' => ['required', 'integer', 'min:0', 'max:9999'],
+        'max_combo' => ['required', 'integer', 'min:0', 'max:99999'],
+        'typed_chars' => ['required', 'integer', 'min:0', 'max:999999'],
+        'miss_count' => ['required', 'integer', 'min:0', 'max:999999'],
+        'duration_ms' => ['required', 'integer', 'min:0', 'max:99999999'],
+        'miss_map' => ['nullable', 'array'],
+    ]);
+
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $run = EndlessRun::where('id', $data['run_id'])->where('player_id', $player->id)->first();
+
+    if (! $run) {
+        return response()->json(['ok' => false], 404);
+    }
+
+    if ($run->finished) {
+        return response()->json(['ok' => true, 'redirect' => "/endless/result/{$run->id}"]);
+    }
+
+    $stats = $player->statsFor($run->character);
+    $levelBefore = $stats->level;
+
+    $gain = EndlessGen::totalExp($run->mode, $data['defeated']);
+    $stats->addExp($gain);
+
+    if ($data['defeated'] > 0) {
+        $stats->increment('wins');
+    } else {
+        $stats->increment('losses');
+    }
+
+    $run->update([
+        'defeated' => $data['defeated'],
+        'exp_gained' => $gain,
+        'level_before' => $levelBefore,
+        'level_after' => $stats->level,
+        'max_combo' => $data['max_combo'],
+        'typed_chars' => $data['typed_chars'],
+        'miss_count' => $data['miss_count'],
+        'duration_ms' => $data['duration_ms'],
+        'miss_map' => $data['miss_map'] ?? null,
+        'finished' => true,
+    ]);
+
+    if (! empty($data['miss_map'])) {
+        $player->recordMisses($data['miss_map']);
+    }
+
+    return response()->json(['ok' => true, 'redirect' => "/endless/result/{$run->id}"]);
+});
+
+Route::get('/endless/result/{run}', function (Request $request, int $run) {
+    $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+    $r = EndlessRun::where('id', $run)->where('player_id', $player->id)->first();
+
+    if (! $r || ! $r->finished) {
+        return redirect('/character');
+    }
+
+    $prevBest = (int) $player->endlessRuns()
+        ->where('mode', $r->mode)
+        ->where('id', '<', $r->id)
+        ->max('defeated');
+
+    return CurrentPlayer::attach(
+        response()->view('endless-result', [
+            'run' => $r,
+            'conf' => $r->config(),
+            'pc' => $player->statsFor($r->character),
+            'charConf' => config('characters.' . $r->character),
+            'prevBest' => $prevBest,
+            'isNewBest' => $r->defeated > $prevBest,
             'missTop' => collect($r->miss_map ?? [])->sortDesc()->take(4)->all(),
         ]),
         $player

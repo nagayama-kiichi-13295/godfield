@@ -119,6 +119,15 @@
         @endforeach
     </div>
 
+    <h2 class="subtitle">果てなき挑戦</h2>
+    <div class="modes">
+        @foreach (config('endless') as $mKey => $m)
+            <a class="mode-btn" href="/endless/{{ $mKey }}" style="--c: {{ $m['color'] }}">
+                {{ $m['label'] }}<span class="mode-sub">{{ $m['mode'] === 'depth' ? '無限' : $m['total_time'] . ' 秒' }}</span>
+            </a>
+        @endforeach
+    </div>
+
     <h2 class="subtitle">オンライン対戦</h2>
     <div class="modes">
         <a class="mode-btn online" href="/matching">対戦相手を探す</a>

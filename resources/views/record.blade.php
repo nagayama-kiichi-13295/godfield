@@ -13,7 +13,7 @@
 
     <div class="summary">
         <div class="sum-box">
-            <div class="sum-num">{{ $totalRuns + $trainCount }}</div>
+            <div class="sum-num">{{ $totalRuns + $trainCount + $endlessCount }}</div>
             <div class="sum-label">総プレイ回数</div>
         </div>
         <div class="sum-box">
@@ -51,6 +51,47 @@
                 </div>
                 <div class="stage-num">{{ $r['best'] }} / {{ $r['total'] }}</div>
                 <div class="stage-plays">{{ $r['plays'] }} 回</div>
+            </div>
+        @endforeach
+    </div>
+
+    <h2 class="subtitle">果てなき挑戦</h2>
+    <div class="endless-list">
+        @foreach ($endless as $eKey => $e)
+            <div class="endless-card" style="--c: {{ $e['color'] }}">
+                <div class="ec-head">
+                    <span class="ec-label">{{ $e['label'] }}</span>
+                    <a class="ec-go" href="/endless/{{ $eKey }}">挑戦する</a>
+                </div>
+
+                <div class="ec-best">
+                    <span class="ec-num">{{ $e['best'] }}</span>
+                    <span class="ec-unit">{{ $e['unit'] }}</span>
+                    <span class="ec-caption">自己ベスト</span>
+                </div>
+
+                <div class="ec-meta">
+                    <span>{{ $e['plays'] }} 回挑戦</span>
+                    <span>累計 {{ number_format($e['total_kills']) }} {{ $e['unit'] }}</span>
+                    <span>EXP {{ number_format($e['exp']) }}</span>
+                </div>
+
+                @if (!empty($e['recent']))
+                    <div class="ec-recent">
+                        @foreach ($e['recent'] as $r)
+                            <a class="ec-row" href="/endless/result/{{ $r['id'] }}">
+                                <span class="ec-date">{{ $r['date'] }}</span>
+                                <span class="ec-result {{ $r['defeated'] >= $e['best'] && $e['best'] > 0 ? 'top' : '' }}">
+                                    {{ $r['defeated'] }} {{ $e['unit'] }}
+                                </span>
+                                <span class="ec-acc">{{ $r['accuracy'] }}%</span>
+                                <span class="ec-exp">+{{ number_format($r['exp']) }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="ec-empty">まだ記録がありません</p>
+                @endif
             </div>
         @endforeach
     </div>

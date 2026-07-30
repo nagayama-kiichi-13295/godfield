@@ -91,4 +91,49 @@ class Player extends Model
     {
         return $this->hasMany(TrainingRun::class);
     }
+
+    public function endlessRuns(): HasMany
+    {
+        return $this->hasMany(EndlessRun::class);
+    }
+
+    public function endlessBest(string $mode): int
+    {
+        return (int) $this->endlessRuns()->where('mode', $mode)->max('defeated');
+    }
+
+    public function endlessSummary(): array
+    {
+        $rows = $this->endlessRuns()
+            ->where('finished', true)
+            ->get()
+            ->groupBy('mode');
+
+        $out = [];
+
+        foreach (config('endless') as $key => $conf) {
+            $g = $rows->get($key);
+
+            $out[$key] = [
+                'label' => $conf['label'],
+                'color' => $conf['color'],
+                'unit' => $conf['mode'] === 'depth' ? '階' : '体',
+                'best' => (int) ($g?->max('defeated') ?? 0),
+                'plays' => (int) ($g?->count() ?? 0),
+                'total_kills' => (int) ($g?->sum('defeated') ?? 0),
+                'exp' => (int) ($g?->sum('exp_gained') ?? 0),
+                'recent' => $g
+                    ? $g->sortByDesc('id')->take(5)->map(fn ($r) => [
+                        'id' => $r->id,
+                        'defeated' => $r->defeated,
+                        'accuracy' => $r->accuracy(),
+                        'exp' => $r->exp_gained,
+                        'date' => $r->created_at->format('m/d H:i'),
+                    ])->values()->all()
+                    : [],
+            ];
+        }
+
+        return $out;
+    }
 }
