@@ -464,15 +464,17 @@ Route::post('/solo/finish', function (Request $request) {
 
     $levelBefore = $stats->level;
     $cleared = $run->cleared >= $run->totalEnemies();
-    $got = $player->grantFrom($conf['drops'] ?? []);
-    $drop = $got['item'] ?? null;
+    $bonus = 0;
+    $drop = null;
 
     if ($cleared) {
         $bonus = (int) $conf['clear_bonus'];
         $stats->addExp($bonus);
         $stats->increment('wins');
         $run->increment('exp_gained', $bonus);
-        $drop = $player->grantFrom($conf['drops'] ?? []);
+
+        $got = $player->grantFrom($conf['drops'] ?? []);
+        $drop = $got['item'] ?? null;
     } else {
         $stats->increment('losses');
     }
@@ -735,6 +737,7 @@ Route::get('/training', function (Request $request) {
         'player_id' => $player->id,
         'character' => $pc->character,
         'target_kana' => $weak,
+        'word_list' => $words,
         'level_before' => $pc->level,
     ]);
 
@@ -756,7 +759,6 @@ Route::post('/training/finish', function (Request $request) {
     $data = $request->validate([
         'run_id' => ['required', 'integer'],
         'words' => ['required', 'integer', 'min:0', 'max:9999'],
-        'weak_words' => ['required', 'integer', 'min:0', 'max:9999'],
         'typed_chars' => ['required', 'integer', 'min:0', 'max:999999'],
         'miss_count' => ['required', 'integer', 'min:0', 'max:999999'],
         'max_combo' => ['required', 'integer', 'min:0', 'max:99999'],
@@ -778,25 +780,37 @@ Route::post('/training/finish', function (Request $request) {
     $conf = config('training');
     $stats = $player->statsFor($run->character);
 
-    $normal = max(0, $data['words'] - $data['weak_words']);
-    $accuracy = $data['typed_chars'] + $data['miss_count'] > 0
-        ? $data['typed_chars'] / ($data['typed_chars'] + $data['miss_count']) * 100
-        : 0;
+    $listCount = count($run->word_list ?? []);
+    $words = min($data['words'], $listCount);
+
+    $elapsed = min($data['duration_ms'], ($conf['time_limit'] + 5) * 1000);
+    $typed = min($data['typed_chars'], $elapsed > 0 ? (int) ceil($elapsed / 1000 * 20) : 0);
+
+    while ($words > 0 && $typed < $run->minCharsFor($words)) {
+        $words--;
+    }
+
+    $weak = $run->weakCountFor($words);
+    $normal = max(0, $words - $weak);
+
+    $misses = min($data['miss_count'], $typed + 500);
+    $total = $typed + $misses;
+    $accuracy = $total > 0 ? $typed / $total * 100 : 0;
 
     $gain = $normal * $conf['exp_per_word']
-        + $data['weak_words'] * $conf['exp_per_weak']
-        + ($accuracy >= $conf['accuracy_line'] ? $conf['accuracy_bonus'] : 0);
+        + $weak * $conf['exp_per_weak']
+        + ($words >= $listCount && $accuracy >= $conf['accuracy_line'] ? $conf['accuracy_bonus'] : 0);
 
     $levelBefore = $stats->level;
     $stats->addExp($gain);
 
     $run->update([
-        'words' => $data['words'],
-        'weak_words' => $data['weak_words'],
-        'typed_chars' => $data['typed_chars'],
-        'miss_count' => $data['miss_count'],
-        'max_combo' => $data['max_combo'],
-        'duration_ms' => $data['duration_ms'],
+        'words' => $words,
+        'weak_words' => $weak,
+        'typed_chars' => $typed,
+        'miss_count' => $misses,
+        'max_combo' => min($data['max_combo'], $words),
+        'duration_ms' => $elapsed,
         'miss_map' => $data['miss_map'] ?? null,
         'exp_gained' => $gain,
         'level_before' => $levelBefore,

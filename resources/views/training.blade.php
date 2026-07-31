@@ -77,6 +77,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const typing = window.Typing.create({
         words,
+        shuffle: false,
         displayEl: $('display'),
         readingEl: $('reading'),
         romaEl: roma,
@@ -145,7 +146,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     run_id: runId,
                     words: doneWords,
-                    weak_words: weakWords,
                     typed_chars: s.typedChars,
                     miss_count: s.missCount,
                     max_combo: s.maxCombo,
