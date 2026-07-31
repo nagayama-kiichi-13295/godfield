@@ -78,27 +78,20 @@ window.addEventListener('DOMContentLoaded', () => {
     const enemies = @json($enemies);
     const conf = @json($conf);
     const runId = @json($runId);
-    const MY_MAX = @json($me['max_hp']);
-    const MY_POWER = @json($me['power']);
-    const MY_HEAL = @json($me['heal']);
+    const me = @json($me);
     const token = document.querySelector('meta[name=csrf-token]').content;
 
     const $ = (id) => document.getElementById(id);
-    const roma = $('roma'), comboEl = $('combo'), dmgEl = $('dmg'), healEl = $('heal');
+    const roma = $('roma');
     const progressEl = $('progress'), timerEl = $('timer'), depthBadge = $('depth-badge');
     const enemyNameEl = $('enemy-name'), enemyBlock = $('enemy-block');
     const overlay = $('overlay'), overlayText = $('overlay-text'), overlaySub = $('overlay-sub');
     const startBtn = $('start'), soundBtn = $('sound');
-    const hpMeEl = $('hp-me'), hpYouEl = $('hp-you');
-    const hpMeNum = $('hp-me-num'), hpYouNum = $('hp-you-num');
 
     const TIMED = conf.mode === 'timed';
-    const HEAL_CAP_RATE = 0.25;
 
-    let ei = 0, myHp = MY_MAX, enemyHp = 0, enemyMax = 1, cur = null;
-    let healedThisEnemy = 0, healCap = 0;
-    let deadline = 0, attackTimer = null, rafId = null;
-    let running = false, over = false, runStart = 0, defeated = 0;
+    let ei = 0, defeated = 0;
+    let deadline = 0, rafId = null, runStart = 0, over = false;
 
     const typing = window.Typing.create({
         words,
@@ -108,80 +101,31 @@ window.addEventListener('DOMContentLoaded', () => {
         onMiss: () => {
             roma.classList.add('miss');
             setTimeout(() => roma.classList.remove('miss'), 120);
-            comboEl.textContent = '';
+            $('combo').textContent = '';
             window.FX.SFX.miss();
             window.FX.shake(roma);
         },
-        onWord: (info) => {
-            if (!running) return;
-
-            const dmg = window.Typing.calcDamage(MY_POWER, info.chars, info.seconds, info.combo);
-            enemyHp -= dmg;
-
-            comboEl.textContent = info.combo >= 2 ? `${info.combo} COMBO` : '';
-            dmgEl.textContent = `${dmg} ダメージ`;
-
-            const crit = dmg >= MY_POWER * 1.6;
-            window.FX.SFX.word();
-            window.FX.popup(hpYouEl, `-${dmg}`, crit ? 'crit' : 'dmg');
-            window.FX.shake(hpYouEl, crit);
-
-            const heal = window.Typing.calcHeal(MY_HEAL, info.combo);
-
-            if (heal > 0 && healedThisEnemy < healCap) {
-                const actual = Math.min(heal, healCap - healedThisEnemy, MY_MAX - myHp);
-                if (actual > 0) {
-                    myHp += actual;
-                    healedThisEnemy += actual;
-                    healEl.textContent = `+${actual} 回復`;
-                    setTimeout(() => { healEl.textContent = ''; }, 900);
-                    window.FX.SFX.heal();
-                    window.FX.popup(hpMeEl, `+${actual}`, 'heal');
-                }
-            }
-
-            updateHp();
-            if (enemyHp <= 0) defeat();
-        },
+        onWord: (info) => battle.handleWord(info),
     });
 
-    function updateHp() {
-        myHp = Math.max(0, Math.min(MY_MAX, myHp));
-        const eh = Math.max(0, enemyHp);
-        hpMeEl.style.width = (myHp / MY_MAX * 100) + '%';
-        hpYouEl.style.width = (eh / enemyMax * 100) + '%';
-        hpMeNum.textContent = `${myHp} / ${MY_MAX}`;
-        hpYouNum.textContent = `${eh} / ${enemyMax}`;
-    }
+    const battle = window.Battle.create({
+        typing,
+        me,
+        healCapRate: 0.25,
+        ui: {
+            hpMeBar: $('hp-me'), hpYouBar: $('hp-you'),
+            hpMeNum: $('hp-me-num'), hpYouNum: $('hp-you-num'),
+            combo: $('combo'), dmg: $('dmg'), heal: $('heal'),
+        },
+        onEnemyDown: () => onDefeat(),
+        onPlayerDown: () => finish(),
+    });
 
-    function hitMe(power) {
-        myHp -= power;
-        updateHp();
-        hpMeEl.classList.add('hit');
-        setTimeout(() => hpMeEl.classList.remove('hit'), 150);
-        window.FX.popup(hpMeEl, `-${power}`, 'take');
-        window.FX.flash('red');
-        window.FX.shake(document.querySelector('.arena'));
-        window.FX.SFX.hit();
-        return myHp <= 0;
-    }
-
-    function clearTimers() {
-        clearTimeout(attackTimer);
-        cancelAnimationFrame(rafId);
-    }
-
-    function scheduleAttack() {
-        attackTimer = setTimeout(() => {
-            if (!running) return;
-            if (hitMe(cur.power)) { finish(); return; }
-            scheduleAttack();
-        }, cur.interval * 1000);
-    }
+    function stopTimer() { cancelAnimationFrame(rafId); }
 
     function watchTimer() {
         const tick = () => {
-            if (!running) return;
+            if (over) return;
             const left = (deadline - Date.now()) / 1000;
             if (left <= 0) { timerEl.textContent = '0.0'; finish(); return; }
             timerEl.textContent = left.toFixed(1);
@@ -192,44 +136,36 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function startEnemy(i) {
         ei = i;
-        cur = enemies[i];
+        const e = enemies[i];
 
-        if (!cur) { finish(); return; }
+        if (!e) { finish(); return; }
 
-        enemyMax = cur.hp;
-        enemyHp = cur.hp;
-        healedThisEnemy = 0;
-        healCap = Math.round(MY_MAX * HEAL_CAP_RATE);
-
-        enemyNameEl.textContent = cur.name;
-        enemyBlock.classList.toggle('boss', !!cur.is_boss);
+        enemyNameEl.textContent = e.name;
+        enemyBlock.classList.toggle('boss', !!e.is_boss);
 
         if (TIMED) {
             progressEl.textContent = `撃破 ${defeated}`;
             depthBadge.textContent = `${i + 1} 体目`;
         } else {
             progressEl.textContent = `${i + 1} 階`;
-            depthBadge.textContent = cur.is_boss ? '階層主' : '';
-            deadline = Date.now() + cur.limit * 1000;
+            depthBadge.textContent = e.is_boss ? '階層主' : '';
+            deadline = Date.now() + e.limit * 1000;
+            stopTimer();
+            watchTimer();
         }
 
-        updateHp();
-        typing.useMain();
-        running = true;
-        clearTimeout(attackTimer);
-        scheduleAttack();
-        if (!TIMED) { cancelAnimationFrame(rafId); watchTimer(); }
+        battle.setEnemy(e);
+        battle.start();
     }
 
-    function defeat() {
+    function onDefeat() {
         defeated += 1;
         window.FX.SFX.defeat();
         window.FX.flash('white');
 
-        const recover = Math.round(MY_MAX * (TIMED ? conf.heal_per_kill : conf.heal_between));
-        myHp = Math.min(MY_MAX, myHp + recover);
-        updateHp();
-        window.FX.popup(hpMeEl, `+${recover}`, 'heal');
+        const recover = Math.round(me.max_hp * (TIMED ? conf.heal_per_kill : conf.heal_between));
+        battle.hp = battle.hp + recover;
+        window.FX.popup($('hp-me'), `+${recover}`, 'heal');
 
         if (TIMED) {
             progressEl.textContent = `撃破 ${defeated}`;
@@ -237,8 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        running = false;
-        clearTimers();
+        stopTimer();
 
         overlay.style.display = 'flex';
         overlayText.textContent = `${ei + 1} 階 突破`;
@@ -255,9 +190,9 @@ window.addEventListener('DOMContentLoaded', () => {
     async function finish() {
         if (over) return;
         over = true;
-        running = false;
-        typing.stop();
-        clearTimers();
+
+        battle.stop();
+        stopTimer();
         window.FX.SFX.lose();
 
         const s = typing.stats();
@@ -316,7 +251,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     watchTimer();
                 }
 
-                typing.start();
                 startEnemy(0);
             }
         );
@@ -337,11 +271,9 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     enemyNameEl.textContent = enemies[0].name;
-    enemyMax = enemies[0].hp;
-    enemyHp = enemies[0].hp;
+    battle.setEnemy(enemies[0]);
     progressEl.textContent = TIMED ? '撃破 0' : '1 階';
     timerEl.textContent = TIMED ? conf.total_time.toFixed(1) : enemies[0].limit.toFixed(1);
-    updateHp();
 });
 </script>
 </body>

@@ -3,10 +3,16 @@
 return [
     'slots' => ['weapon' => '武器', 'armor' => '防具', 'charm' => '護符'],
 
+    'max_level' => 5,
+
+    'cost' => [1 => 1, 2 => 2, 3 => 3, 4 => 5],
+
+    'gain_rate' => 0.5,
+
     'items' => [
         'iron_sword'   => ['name' => '鉄の剣',       'slot' => 'weapon', 'rank' => 1, 'color' => '#9aa5b1', 'hp' => 0,  'power' => 2, 'int' => 0],
         'flame_blade'  => ['name' => '炎刃',         'slot' => 'weapon', 'rank' => 2, 'color' => '#e0555a', 'hp' => 0,  'power' => 5, 'int' => -1],
-        'dragon_fang'  => ['name' => '竜牙の大剣',   'slot' => 'weapon', 'rank' => 3, 'color' => '#c0392b', 'hp' => -10, 'power' => 9, 'int' => 0],
+        'dragon_fang'  => ['name' => '竜牙の大剣',   'slot' => 'weapon', 'rank' => 3, 'color' => '#c0392b', 'hp' => -10,'power' => 9, 'int' => 0],
         'sage_rod'     => ['name' => '賢者の杖',     'slot' => 'weapon', 'rank' => 2, 'color' => '#a06fd6', 'hp' => 0,  'power' => 2, 'int' => 4],
 
         'leather_mail' => ['name' => '革鎧',         'slot' => 'armor',  'rank' => 1, 'color' => '#9aa5b1', 'hp' => 15, 'power' => 0, 'int' => 0],

@@ -41,20 +41,31 @@ class Player extends Model
         return $this->items()->pluck('item')->all();
     }
 
-    public function grantFrom(array $pool): ?string
+    public function grantFrom(array $pool): ?array
     {
-        $owned = $this->ownedItems();
-        $candidates = array_values(array_diff($pool, $owned));
-
-        if (empty($candidates)) {
+        if (empty($pool)) {
             return null;
         }
 
-        $key = $candidates[array_rand($candidates)];
+        $key = $pool[array_rand($pool)];
+        $row = $this->items()->firstOrNew(['item' => $key]);
 
-        $this->items()->create(['item' => $key]);
+        $isNew = ! $row->exists;
 
-        return $key;
+        if ($isNew) {
+            $row->level = 0;
+            $row->shards = 0;
+        } else {
+            $row->shards += 1;
+        }
+
+        $row->save();
+
+        return [
+            'item' => $key,
+            'name' => config('equipment.items.' . $key . '.name', $key),
+            'is_new' => $isNew,
+        ];
     }
 
     public function missStats(): HasMany
@@ -100,40 +111,5 @@ class Player extends Model
     public function endlessBest(string $mode): int
     {
         return (int) $this->endlessRuns()->where('mode', $mode)->max('defeated');
-    }
-
-    public function endlessSummary(): array
-    {
-        $rows = $this->endlessRuns()
-            ->where('finished', true)
-            ->get()
-            ->groupBy('mode');
-
-        $out = [];
-
-        foreach (config('endless') as $key => $conf) {
-            $g = $rows->get($key);
-
-            $out[$key] = [
-                'label' => $conf['label'],
-                'color' => $conf['color'],
-                'unit' => $conf['mode'] === 'depth' ? '階' : '体',
-                'best' => (int) ($g?->max('defeated') ?? 0),
-                'plays' => (int) ($g?->count() ?? 0),
-                'total_kills' => (int) ($g?->sum('defeated') ?? 0),
-                'exp' => (int) ($g?->sum('exp_gained') ?? 0),
-                'recent' => $g
-                    ? $g->sortByDesc('id')->take(5)->map(fn ($r) => [
-                        'id' => $r->id,
-                        'defeated' => $r->defeated,
-                        'accuracy' => $r->accuracy(),
-                        'exp' => $r->exp_gained,
-                        'date' => $r->created_at->format('m/d H:i'),
-                    ])->values()->all()
-                    : [],
-            ];
-        }
-
-        return $out;
     }
 }

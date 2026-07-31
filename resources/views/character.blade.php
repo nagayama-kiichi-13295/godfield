@@ -71,22 +71,40 @@
 
                 <div class="equip">
                     @foreach ($equipment['slots'] as $slot => $slotLabel)
-                        <form method="POST" action="/character/equip" class="equip-row">
-                            @csrf
-                            <input type="hidden" name="character" value="{{ $charKey }}">
-                            <input type="hidden" name="slot" value="{{ $slot }}">
-                            <span class="equip-label">{{ $slotLabel }}</span>
-                            <select name="item" class="equip-select" onchange="this.form.submit()">
-                                <option value="">なし</option>
-                                @foreach ($equipment['items'] as $itemKey => $it)
-                                    @if ($it['slot'] === $slot && in_array($itemKey, $owned, true))
-                                        <option value="{{ $itemKey }}" @selected($s->{'eq_' . $slot} === $itemKey)>
-                                            {{ $it['name'] }}
-                                        </option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </form>
+                        @php $eqKey = $s->{'eq_' . $slot}; $eqRow = $eqKey ? ($owned[$eqKey] ?? null) : null; @endphp
+                        <div class="equip-row">
+                            <form method="POST" action="/character/equip" class="equip-form">
+                                @csrf
+                                <input type="hidden" name="character" value="{{ $charKey }}">
+                                <input type="hidden" name="slot" value="{{ $slot }}">
+                                <span class="equip-label">{{ $slotLabel }}</span>
+                                <select name="item" class="equip-select" onchange="this.form.submit()">
+                                    <option value="">なし</option>
+                                    @foreach ($equipment['items'] as $itemKey => $it)
+                                        @if ($it['slot'] === $slot && isset($owned[$itemKey]))
+                                            <option value="{{ $itemKey }}" @selected($eqKey === $itemKey)>
+                                                {{ $owned[$itemKey]->name() }}
+                                            </option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </form>
+
+                            @if ($eqRow)
+                                @php $cost = $eqRow->nextCost(); @endphp
+                                <form method="POST" action="/character/upgrade" class="up-form">
+                                    @csrf
+                                    <input type="hidden" name="item" value="{{ $eqKey }}">
+                                    <button class="up-btn" @disabled(!$eqRow->canUpgrade())>
+                                        @if ($cost === null)
+                                            MAX
+                                        @else
+                                            強化 {{ $eqRow->shards }}/{{ $cost }}
+                                        @endif
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
                     @endforeach
                 </div>
 

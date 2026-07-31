@@ -67,9 +67,32 @@ class PlayerCharacter extends Model
         return true;
     }
 
+    public function equipBonus(): array
+    {
+        $keys = array_filter(array_values($this->equipMap()));
+
+        if (empty($keys)) {
+            return ['hp' => 0, 'power' => 0, 'int' => 0];
+        }
+
+        $items = PlayerItem::where('player_id', $this->player_id)
+            ->whereIn('item', $keys)
+            ->get();
+
+        $sum = ['hp' => 0, 'power' => 0, 'int' => 0];
+
+        foreach ($items as $it) {
+            foreach ($it->bonus() as $k => $v) {
+                $sum[$k] += $v;
+            }
+        }
+
+        return $sum;
+    }
+
     public function stats(): array
     {
-        return Stats::of($this->character, $this->level, $this->pointMap(), $this->equipMap());
+        return Stats::of($this->character, $this->level, $this->pointMap(), $this->equipBonus());
     }
 
     public function name(): string

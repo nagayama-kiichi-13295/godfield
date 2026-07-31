@@ -119,15 +119,18 @@ body {
 .equip-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 6px;
 }
 
 .equip-row:last-child { margin-bottom: 0; }
+
+.equip-form { display: flex; align-items: center; gap: 8px; flex: 1; }
 .equip-label { width: 34px; font-size: 12px; opacity: .7; text-align: left; }
 
 .equip-select {
     flex: 1;
+    min-width: 0;
     padding: 5px 6px;
     font-size: 12px;
     color: #fff;
@@ -137,3 +140,18 @@ body {
 }
 
 .equip-select:focus { outline: none; border-color: var(--c); }
+
+.up-btn {
+    white-space: nowrap;
+    padding: 5px 8px;
+    font-size: 11px;
+    color: #fff;
+    background: #3a3a5c;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: monospace;
+}
+
+.up-btn:hover:not(:disabled) { background: #ffd166; color: #1b1b2f; }
+.up-btn:disabled { opacity: .35; cursor: default; }
