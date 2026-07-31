@@ -1,0 +1,264 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Events\MatchFinished;
+use App\Events\MatchFound;
+use App\Events\MatchStarted;
+use App\Events\PlayerProgressed;
+use App\Models\GameMatch;
+use App\Models\Player;
+use App\Support\CurrentPlayer;
+use App\Support\Stats;
+use App\Support\WordList;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class MatchController extends Controller
+{
+    public function matching(Request $request)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+        if (! $player->name) {
+            return CurrentPlayer::attach(redirect('/player'), $player);
+        }
+
+        return CurrentPlayer::attach(
+            response()->view('matching', ['name' => $player->name]),
+            $player
+        );
+    }
+
+    public function join(Request $request)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+        if (! $player->name) {
+            return response()->json(['error' => 'no_name'], 422);
+        }
+
+        $stats = $player->currentStats();
+
+        [$match, $role] = DB::transaction(function () use ($player, $stats) {
+            $waiting = GameMatch::where('status', 'waiting')
+                ->whereNull('player2_id')
+                ->where('player1_id', '!=', $player->id)
+                ->where('created_at', '>', now()->subMinutes(2))
+                ->lockForUpdate()
+                ->oldest()
+                ->first();
+
+            if ($waiting) {
+                $waiting->update([
+                    'player2_id' => $player->id,
+                    'player2' => $player->name,
+                    'player2_char' => $stats->character,
+                    'player2_level' => $stats->level,
+                    'player2_stats' => $stats->stats(),
+                    'status' => 'playing',
+                ]);
+
+                return [$waiting, 'player2'];
+            }
+
+            GameMatch::where('player1_id', $player->id)
+                ->where('status', 'waiting')
+                ->delete();
+
+            return [GameMatch::create([
+                'player1_id' => $player->id,
+                'player1' => $player->name,
+                'player1_char' => $stats->character,
+                'player1_level' => $stats->level,
+                'player1_stats' => $stats->stats(),
+                'status' => 'waiting',
+            ]), 'player1'];
+        });
+
+        if ($role === 'player2') {
+            broadcast(new MatchFound($match->id, $match->player1, $match->player2));
+        }
+
+        return CurrentPlayer::attach(
+            response()->json([
+                'match_id' => $match->id,
+                'status' => $match->status,
+                'role' => $role,
+            ]),
+            $player
+        );
+    }
+
+    public function status(Request $request)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+        $match = GameMatch::where(function ($q) use ($player) {
+            $q->where('player1_id', $player->id)->orWhere('player2_id', $player->id);
+        })->latest('id')->first();
+
+        if (! $match) {
+            return response()->json(['status' => 'none']);
+        }
+
+        return response()->json(['status' => $match->status, 'match_id' => $match->id]);
+    }
+
+    public function cancel(Request $request)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+
+        GameMatch::where('player1_id', $player->id)->where('status', 'waiting')->delete();
+
+        return response()->noContent();
+    }
+
+    public function show(Request $request, string $matchId)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+        $match = GameMatch::find($matchId);
+
+        if (! $match || ! in_array($player->id, [$match->player1_id, $match->player2_id], true)) {
+            return redirect('/character');
+        }
+
+        $isP1 = $match->player1_id === $player->id;
+
+        $me = ($isP1 ? $match->player1_stats : $match->player2_stats)
+            ?? Stats::of(
+                $isP1 ? $match->player1_char : $match->player2_char,
+                $isP1 ? $match->player1_level : $match->player2_level
+            );
+
+        $opp = ($isP1 ? $match->player2_stats : $match->player1_stats)
+            ?? Stats::of(
+                $isP1 ? $match->player2_char : $match->player1_char,
+                $isP1 ? $match->player2_level : $match->player1_level
+            );
+
+        return CurrentPlayer::attach(
+            response()->view('match', [
+                'matchId' => $matchId,
+                'words' => WordList::forMatch($matchId, 60, ['short', 'long']),
+                'meName' => $isP1 ? $match->player1 : $match->player2,
+                'oppName' => $isP1 ? $match->player2 : $match->player1,
+                'meLevel' => $isP1 ? $match->player1_level : $match->player2_level,
+                'oppLevel' => $isP1 ? $match->player2_level : $match->player1_level,
+                'me' => $me,
+                'opp' => $opp,
+            ]),
+            $player
+        );
+    }
+
+    public function start(Request $request, string $matchId)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+        $match = GameMatch::find($matchId);
+
+        if (! $match || ! in_array($player->id, [$match->player1_id, $match->player2_id], true)) {
+            return response()->json(['error' => 'forbidden'], 403);
+        }
+
+        $startAt = (int) (microtime(true) * 1000) + 4000;
+
+        broadcast(new MatchStarted($matchId, $startAt));
+
+        return response()->json(['start_at' => $startAt]);
+    }
+
+    public function progress(Request $request, string $matchId)
+    {
+        $data = $request->validate([
+            'player_key' => ['required', 'string', 'max:64'],
+            'word_index' => ['required', 'integer', 'min:0', 'max:9999'],
+            'damage' => ['required', 'integer', 'min:0', 'max:99999'],
+            'combo' => ['required', 'integer', 'min:0', 'max:9999'],
+            'hp' => ['required', 'integer', 'min:0', 'max:99999'],
+            'healed' => ['required', 'integer', 'min:0', 'max:99999'],
+        ]);
+
+        broadcast(new PlayerProgressed(
+            $matchId,
+            $data['player_key'],
+            $data['word_index'],
+            $data['damage'],
+            $data['combo'],
+            $data['hp'],
+            $data['healed'],
+        ))->toOthers();
+
+        return response()->noContent();
+    }
+
+    public function finish(Request $request, string $matchId)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+        $match = GameMatch::find($matchId);
+
+        if (! $match || ! in_array($player->id, [$match->player1_id, $match->player2_id], true)) {
+            return response()->json(['error' => 'forbidden'], 403);
+        }
+
+        DB::transaction(function () use ($match, $player) {
+            $fresh = GameMatch::whereKey($match->id)->lockForUpdate()->first();
+
+            if ($fresh->status === 'finished') {
+                return;
+            }
+
+            $winnerIsP1 = $fresh->player1_id === $player->id;
+
+            $fresh->update([
+                'status' => 'finished',
+                'winner_id' => $player->id,
+                'winner' => $winnerIsP1 ? $fresh->player1 : $fresh->player2,
+            ]);
+
+            $winner = Player::find($player->id);
+            $loser = Player::find($winnerIsP1 ? $fresh->player2_id : $fresh->player1_id);
+
+            if ($winner) {
+                $s = $winner->statsFor($winnerIsP1 ? $fresh->player1_char : $fresh->player2_char);
+                $s->addExp(config('battle.online_exp_win'));
+                $s->increment('wins');
+            }
+
+            if ($loser) {
+                $s = $loser->statsFor($winnerIsP1 ? $fresh->player2_char : $fresh->player1_char);
+                $s->addExp(config('battle.online_exp_lose'));
+                $s->increment('losses');
+            }
+
+            broadcast(new MatchFinished($match->id, $fresh->winner ?? '不明'));
+        });
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function result(Request $request, string $matchId)
+    {
+        $player = CurrentPlayer::resolve($request->cookie(CurrentPlayer::COOKIE));
+        $match = GameMatch::find($matchId);
+
+        if (! $match || $match->status !== 'finished') {
+            return response()->json(['ready' => false]);
+        }
+
+        $isP1 = $match->player1_id === $player->id;
+        $stats = $player->statsFor($isP1 ? $match->player1_char : $match->player2_char);
+        $won = $match->winner_id === $player->id;
+
+        return response()->json([
+            'ready' => true,
+            'won' => $won,
+            'winner' => $match->winner,
+            'character' => $stats->name(),
+            'gain' => $won ? config('battle.online_exp_win') : config('battle.online_exp_lose'),
+            'level' => $stats->level,
+            'exp' => $stats->exp,
+            'required' => $stats->requiredExp(),
+        ]);
+    }
+}
