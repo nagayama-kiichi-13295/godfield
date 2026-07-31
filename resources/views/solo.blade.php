@@ -87,51 +87,34 @@
             const boss = @json($boss);
             const healBetween = @json($stageConf['heal_between']);
             const runId = @json($runId);
-            const MY_MAX = @json($me['max_hp']);
-            const MY_POWER = @json($me['power']);
-            const MY_HEAL = @json($me['heal']);
+            const me = @json($me);
             const token = document.querySelector('meta[name=csrf-token]').content;
 
             const $ = (id) => document.getElementById(id);
-            const roma = $('roma'),
-                comboEl = $('combo'),
-                dmgEl = $('dmg'),
-                healEl = $('heal');
+            const roma = $('roma');
             const progressEl = $('progress'),
-                timerEl = $('timer'),
-                enemyNameEl = $('enemy-name');
-            const enemyBlock = $('enemy-block');
+                timerEl = $('timer');
+            const enemyNameEl = $('enemy-name'),
+                enemyBlock = $('enemy-block');
             const overlay = $('overlay'),
                 overlayText = $('overlay-text'),
                 overlaySub = $('overlay-sub');
             const startBtn = $('start'),
                 soundBtn = $('sound');
-            const hpMeEl = $('hp-me'),
-                hpYouEl = $('hp-you');
-            const hpMeNum = $('hp-me-num'),
-                hpYouNum = $('hp-you-num');
             const telegraph = $('telegraph'),
                 telegraphText = $('telegraph-text'),
                 telegraphFill = $('telegraph-fill');
 
-            const HEAL_CAP_RATE = 0.25;
             const total = enemies.length + (boss ? 1 : 0);
 
             let ei = 0,
-                myHp = MY_MAX,
-                enemyHp = 0,
-                enemyMax = 1;
-            let healedThisEnemy = 0,
-                healCap = 0;
-            let deadline = 0,
-                attackTimer = null,
-                chargeTimer = null,
-                rafId = null,
-                chargeRaf = null;
-            let running = false,
-                over = false,
                 isBoss = false;
-            let runStart = 0;
+            let deadline = 0,
+                rafId = null,
+                chargeRaf = null,
+                chargeTimer = null;
+            let runStart = 0,
+                over = false;
             let charging = false,
                 defNeed = 0,
                 defDone = 0,
@@ -147,130 +130,82 @@
                 onMiss: () => {
                     roma.classList.add('miss');
                     setTimeout(() => roma.classList.remove('miss'), 120);
-                    comboEl.textContent = '';
+                    $('combo').textContent = '';
                     window.FX.SFX.miss();
                     window.FX.shake(roma);
                 },
-                onWord: (info) => {
-                    if (!running) return;
-
-                    if (charging) {
-                        defDone += 1;
-                        telegraphText.textContent = `防御 ${defDone} / ${defNeed}`;
-                        window.FX.SFX.guard();
-                        if (defDone >= defNeed) resolveCharge(true);
-                        return;
-                    }
-
-                    const dmg = window.Typing.calcDamage(MY_POWER, info.chars, info.seconds, info.combo);
-                    enemyHp -= dmg;
-
-                    comboEl.textContent = info.combo >= 2 ? `${info.combo} COMBO` : '';
-                    dmgEl.textContent = `${dmg} ダメージ`;
-
-                    const crit = dmg >= MY_POWER * 1.6;
-                    window.FX.SFX.word();
-                    window.FX.popup(hpYouEl, `-${dmg}`, crit ? 'crit' : 'dmg');
-                    window.FX.shake(hpYouEl, crit);
-
-                    const heal = window.Typing.calcHeal(MY_HEAL, info.combo);
-
-                    if (heal > 0 && healedThisEnemy < healCap) {
-                        const actual = Math.min(heal, healCap - healedThisEnemy, MY_MAX - myHp);
-                        if (actual > 0) {
-                            myHp += actual;
-                            healedThisEnemy += actual;
-                            healEl.textContent = `+${actual} 回復`;
-                            setTimeout(() => {
-                                healEl.textContent = '';
-                            }, 900);
-                            window.FX.SFX.heal();
-                            window.FX.popup(hpMeEl, `+${actual}`, 'heal');
-                        }
-                    }
-
-                    updateHp();
-                    if (enemyHp <= 0) defeat();
-                },
+                onWord: (info) => battle.handleWord(info),
             });
 
-            function updateHp() {
-                myHp = Math.max(0, Math.min(MY_MAX, myHp));
-                const eh = Math.max(0, enemyHp);
-                hpMeEl.style.width = (myHp / MY_MAX * 100) + '%';
-                hpYouEl.style.width = (eh / enemyMax * 100) + '%';
-                hpMeNum.textContent = `${myHp} / ${MY_MAX}`;
-                hpYouNum.textContent = `${eh} / ${enemyMax}`;
-            }
+            const battle = window.Battle.create({
+                typing,
+                me,
+                healCapRate: 0.25,
+                ui: {
+                    hpMeBar: $('hp-me'),
+                    hpYouBar: $('hp-you'),
+                    hpMeNum: $('hp-me-num'),
+                    hpYouNum: $('hp-you-num'),
+                    combo: $('combo'),
+                    dmg: $('dmg'),
+                    heal: $('heal'),
+                },
+                onWord: (info, ctx) => {
+                    if (!ctx.suspended) return;
 
-            function hitMe(power, big = false) {
-                myHp -= power;
-                updateHp();
-                hpMeEl.classList.add('hit');
-                setTimeout(() => hpMeEl.classList.remove('hit'), 150);
+                    defDone += 1;
+                    telegraphText.textContent = `防御 ${defDone} / ${defNeed}`;
+                    window.FX.SFX.guard();
 
-                window.FX.popup(hpMeEl, `-${power}`, 'take');
-                window.FX.flash('red');
-                window.FX.shake(document.querySelector('.arena'), big);
-                big ? window.FX.SFX.bigHit() : window.FX.SFX.hit();
+                    if (defDone >= defNeed) resolveCharge(true);
+                },
+                onEnemyDown: () => defeat(),
+                onPlayerDown: () => finish(),
+            });
 
-                return myHp <= 0;
-            }
-
-            function clearTimers() {
-                clearTimeout(attackTimer);
-                clearTimeout(chargeTimer);
+            function stopTimers() {
                 cancelAnimationFrame(rafId);
                 cancelAnimationFrame(chargeRaf);
+                clearTimeout(chargeTimer);
             }
 
             function phase() {
                 if (!isBoss) return null;
-                const ratio = enemyHp / enemyMax;
+                const ratio = battle.enemyHp / boss.hp;
                 for (const p of boss.phases) {
                     if (ratio > p.until) return p;
                 }
                 return boss.phases[boss.phases.length - 1];
             }
 
-            function scheduleAttack() {
-                const interval = isBoss ? phase().interval : enemies[ei].interval;
-                const power = isBoss ? phase().power : enemies[ei].power;
-
-                attackTimer = setTimeout(() => {
-                    if (!running) return;
-                    if (!charging && hitMe(power)) {
-                        finish();
-                        return;
-                    }
-                    scheduleAttack();
-                }, interval * 1000);
-            }
-
             function scheduleCharge() {
                 if (!isBoss) return;
+
                 chargeTimer = setTimeout(() => {
-                    if (!running || over) return;
+                    if (over || !battle.running) return;
                     beginCharge();
                 }, phase().charge_every * 1000);
             }
 
             function beginCharge() {
                 const p = phase();
+
                 charging = true;
                 defNeed = p.charge_words;
                 defDone = 0;
                 chargeSpan = p.charge_time * 1000;
                 chargeEnd = Date.now() + chargeSpan;
 
-                telegraph.classList.add('on');
-                window.FX.SFX.charge();
-                window.FX.flash('red');
-                telegraphText.textContent = `${boss.name} が力を溜めている！ 防御 0 / ${defNeed}`;
+                battle.suspend();
                 typing.useAlt();
 
+                telegraph.classList.add('on');
+                telegraphText.textContent = `${boss.name} が力を溜めている！ 防御 0 / ${defNeed}`;
+                window.FX.SFX.charge();
+                window.FX.flash('red');
+
                 const tick = () => {
-                    if (!running || !charging) return;
+                    if (over || !charging) return;
                     const left = chargeEnd - Date.now();
                     if (left <= 0) {
                         resolveCharge(false);
@@ -286,16 +221,19 @@
                 charging = false;
                 cancelAnimationFrame(chargeRaf);
                 telegraph.classList.remove('on');
+
                 typing.useMain();
+                battle.resume();
 
                 if (defended) {
-                    healEl.textContent = '防御成功！';
+                    $('heal').textContent = '防御成功！';
                     setTimeout(() => {
-                        healEl.textContent = '';
+                        $('heal').textContent = '';
                     }, 1000);
                     window.FX.flash('blue');
                     window.FX.SFX.guard();
-                } else if (hitMe(phase().charge_power, true)) {
+                } else if (battle.takeDamage(phase().charge_power, true)) {
+                    battle.stop();
                     finish();
                     return;
                 }
@@ -305,10 +243,11 @@
 
             function watchTimer() {
                 const tick = () => {
-                    if (!running) return;
+                    if (over || !battle.running) return;
                     const left = (deadline - Date.now()) / 1000;
                     if (left <= 0) {
                         timerEl.textContent = '0.0';
+                        battle.stop();
                         finish();
                         return;
                     }
@@ -321,35 +260,34 @@
             function startEnemy(i) {
                 ei = i;
                 isBoss = !!(boss && i === enemies.length);
-                const e = isBoss ? boss : enemies[i];
 
-                enemyMax = e.hp;
-                enemyHp = e.hp;
-                healedThisEnemy = 0;
-                healCap = Math.round(MY_MAX * HEAL_CAP_RATE);
-                deadline = Date.now() + e.limit * 1000;
+                const e = isBoss ? boss : enemies[i];
 
                 enemyNameEl.textContent = e.name;
                 progressEl.textContent = isBoss ? 'BOSS' : `${i + 1} / ${total}`;
                 enemyBlock.classList.toggle('boss', isBoss);
                 if (isBoss) enemyBlock.style.setProperty('--c', boss.color);
 
-                updateHp();
-                if (i === 0) funStart = Date.now();
-                running = true;
+                deadline = Date.now() + e.limit * 1000;
+
+                battle.setEnemy(isBoss ? {
+                    ...boss,
+                    power: boss.phases[0].power,
+                    interval: boss.phases[0].interval
+                } : e);
+
                 typing.useMain();
-                typing.start();
-                scheduleAttack();
-                scheduleCharge();
+                battle.start();
+
+                stopTimers();
                 watchTimer();
+                scheduleCharge();
             }
 
             async function defeat() {
-                running = false;
                 charging = false;
                 telegraph.classList.remove('on');
-                typing.stop();
-                clearTimers();
+                stopTimers();
 
                 window.FX.SFX.defeat();
                 window.FX.flash('white');
@@ -387,9 +325,8 @@
                     return;
                 }
 
-                const recover = Math.round(MY_MAX * healBetween);
-                myHp = Math.min(MY_MAX, myHp + recover);
-                updateHp();
+                const recover = Math.round(me.max_hp * healBetween);
+                battle.hp = battle.hp + recover;
 
                 const nextIsBoss = !!(boss && ei + 1 === enemies.length);
                 overlaySub.textContent = nextIsBoss ? `HP +${recover}　次はボスだ` : `HP +${recover} 回復`;
@@ -404,13 +341,13 @@
             async function finish() {
                 if (over) return;
                 over = true;
-                running = false;
+
                 charging = false;
                 telegraph.classList.remove('on');
-                typing.stop();
-                clearTimers();
+                battle.stop();
+                stopTimers();
 
-                const failed = myHp <= 0 || Date.now() >= deadline;
+                const failed = battle.hp <= 0 || Date.now() >= deadline;
                 if (failed) window.FX.SFX.lose();
 
                 const s = typing.stats();
@@ -432,8 +369,8 @@
                             max_combo: s.maxCombo,
                             typed_chars: s.typedChars,
                             miss_count: s.missCount,
-                            miss_map: s.missMap,
                             duration_ms: runStart ? Date.now() - runStart : 0,
+                            miss_map: s.missMap,
                         }),
                     });
                     const d = await res.json();
@@ -466,6 +403,7 @@
                     () => {
                         overlay.style.display = 'none';
                         window.FX.SFX.go();
+                        runStart = Date.now();
                         startEnemy(0);
                     }
                 );
@@ -490,9 +428,8 @@
 
             progressEl.textContent = `1 / ${total}`;
             enemyNameEl.textContent = enemies[0].name;
-            enemyMax = enemies[0].hp;
-            enemyHp = enemies[0].hp;
-            updateHp();
+            battle.setEnemy(enemies[0]);
+            timerEl.textContent = enemies[0].limit.toFixed(1);
         });
     </script>
 </body>
